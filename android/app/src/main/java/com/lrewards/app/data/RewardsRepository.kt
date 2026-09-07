@@ -53,6 +53,13 @@ class RewardsRepository {
         filter { eq("user_id", userId) }
     }.decodeList()
 
+    suspend fun updateProfile(displayName: String): Profile {
+        val id = currentUserId() ?: error("not_authenticated")
+        return supabase.from("profiles").update({ set("display_name", displayName.trim()) }) {
+            filter { eq("id", id) }
+        }.decodeSingle()
+    }
+
     suspend fun requestRedemption(rewardType: String, amount: Int, destination: String): Redemption =
         supabase.rpc("request_redemption", buildJsonObject {
             put("p_reward_type", rewardType)
