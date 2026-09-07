@@ -44,6 +44,8 @@ class RewardsRepository {
         put("p_amount", amount)
     }).decodeAs()
 
+    fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
+
     suspend fun transactions(userId: String): List<Transaction> = supabase.from("transactions").select {
         filter { eq("user_id", userId) }
     }.decodeList()
