@@ -112,9 +112,41 @@ data class SessionUi(val profile: Profile? = null, val transactions: List<Transa
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             when (game.title) {
                 "Spin Wheel" -> { var rotation by remember { mutableFloatStateOf(0f) }; val animated by animateFloatAsState(rotation, label = "wheel"); Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Text("WHEEL", Modifier.rotate(animated), color = Purple, fontSize = 28.sp, fontWeight = FontWeight.Black) }; Button({ rotation += 720f; onComplete() }, Modifier.fillMaxWidth()) { Text("SPIN NOW") } }
-                "Scratch Card" -> { Text(if (revealed) "You revealed a prize" else "Scratch to reveal your prize"); Button({ revealed = true }, Modifier.fillMaxWidth()) { Text(if (revealed) "CLAIM PRIZE" else "REVEAL CARD") }; if (revealed) Text("Prize ready: 0–5 coins", color = Mint) }
-                "Captcha" -> { Text("What is $question + $second?"); OutlinedTextField(answer, { answer = it }, label = { Text("Your answer") }, modifier = Modifier.fillMaxWidth()); Button({ if (answer.toIntOrNull() == question + second) onComplete() }, Modifier.fillMaxWidth()) { Text("SUBMIT") } }
-                else -> { Text("Choose the correct answer: $question + $second"); listOf(question + second, question + second + 1, question + second - 1, question + 2).distinct().forEach { option -> OutlinedButton({ selected = option }, Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected == option) Purple.copy(alpha = .35f) else Color.Transparent)) { Text(option.toString()) } }; Button({ if (selected == question + second) onComplete() }, Modifier.fillMaxWidth()) { Text("SUBMIT QUIZ") } }
+                "Scratch Card" -> {
+                    Text(if (revealed) "You revealed a prize" else "Choose one card to scratch")
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(3) { column ->
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                repeat(3) { row ->
+                                    val card = column * 3 + row
+                                    OutlinedButton({ revealed = true }, Modifier.fillMaxWidth().aspectRatio(1f), enabled = !revealed) { Text(if (revealed) "${card + 1}" else "?") }
+                                }
+                            }
+                        }
+                    }
+                    if (revealed) { Text("Prize revealed: 0–5 coins", color = Mint); Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) { Text("CLAIM PRIZE") } }
+                }
+                "Captcha" -> {
+                    Text("What is $question + $second?")
+                    OutlinedTextField(answer, { answer = it }, label = { Text("Your answer") }, modifier = Modifier.fillMaxWidth())
+                    Button({ if (answer.toIntOrNull() == question + second) onComplete() }, Modifier.fillMaxWidth()) { Text("SUBMIT") }
+                }
+                else -> {
+                    var quizIndex by remember { mutableIntStateOf(0) }
+                    var correct by remember { mutableIntStateOf(0) }
+                    val quizQuestions = remember { List(5) { Random.nextInt(2, 9) to Random.nextInt(1, 9) } }
+                    val current = quizQuestions[quizIndex]
+                    val correctAnswer = current.first + current.second
+                    Text("Question ${quizIndex + 1} of 5", color = Muted)
+                    Text("Choose the correct answer: ${current.first} + ${current.second}")
+                    listOf(correctAnswer, correctAnswer + 1, correctAnswer - 1, correctAnswer + 2).distinct().forEach { option ->
+                        OutlinedButton({ selected = option }, Modifier.fillMaxWidth(), colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected == option) Purple.copy(alpha = .35f) else Color.Transparent)) { Text(option.toString()) }
+                    }
+                    Button({
+                        if (selected == correctAnswer) correct++
+                        if (quizIndex == 4) { if (correct + (if (selected == correctAnswer) 1 else 0) == 5) onComplete() } else { quizIndex++; selected = null }
+                    }, Modifier.fillMaxWidth()) { Text(if (quizIndex == 4) "FINISH QUIZ" else "NEXT QUESTION") }
+                }
             }
         }
     }, confirmButton = {}, dismissButton = { TextButton(onDismiss) { Text("CANCEL") } })
