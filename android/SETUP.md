@@ -21,7 +21,11 @@ Never put the Supabase secret/service-role key in the Android project or APK.
 
 The connected Supabase migration `l_rewards_core_schema` creates `profiles`, `transactions`, `daily_limits`, `redemptions`, and `game_settings`, enables RLS, creates the signup profile trigger, and exposes `claim_reward(game_type, amount)` to authenticated users. Email confirmation remains controlled by the Supabase Auth project settings.
 
-For production, connect the UI actions to Supabase Auth and the RPC using the publishable key only. Reward amounts, daily limits, balances, and ledger writes must remain server-side; do not update `profiles.coins` directly from the client.
+The current native UI is wired to Supabase Auth, profile reads/updates, transaction history, reward RPCs, redemption RPCs, and admin metrics/actions. Reward amounts, daily limits, balances, and ledger writes remain server-side; the Android client never updates `profiles.coins` directly.
+
+The Android client must contain only the publishable key. The secret/service-role key must never be placed in `gradle.properties`, source control, CI artifacts, or the APK. Supabase Auth persists its session using the Kotlin client; signing out clears the local session.
+
+Before release, use a real Supabase account with confirmed email, designate administrators in the database, and verify every redemption/admin action against the RLS policies. The included release build is minified but still requires a project-owned signing key before distribution.
 
 ## Build APK
 

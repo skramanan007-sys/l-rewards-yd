@@ -35,6 +35,14 @@ private val Blue = Color(0xFF38BDF8)
 private val Mint = Color(0xFF34D399)
 private val Muted = Color(0xFFAAB5D0)
 
+private fun gameTypeFor(title: String): String = when (title) {
+    "Spin Wheel" -> "spin"
+    "Scratch Card" -> "scratch"
+    "Captcha" -> "captcha"
+    "Math Quiz" -> "quiz"
+    else -> error("Unsupported game")
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { LRewardsApp() } }
 }
@@ -71,7 +79,7 @@ data class SessionUi(val profile: Profile? = null, val transactions: List<Transa
     LaunchedEffect(Unit) { reload() }
     val profile = session.profile; val balance = profile?.coins ?: 0
     val games = listOf(Game("Spin Wheel", "Lucky spin", "1–10 coins", 5, Icons.Default.Refresh, Purple), Game("Scratch Card", "Reveal a prize", "0–5 coins", 3, Icons.Default.Star, Color(0xFFF59E0B)), Game("Captcha", "Quick challenge", "+2 coins", 3, Icons.Default.Lock, Blue), Game("Math Quiz", "Five questions", "+5 coins", 2, Icons.Default.School, Mint))
-    fun reward(game: Game) { scope.launch { val amount = when (game.title) { "Spin Wheel" -> Random.nextInt(1, 11); "Scratch Card" -> Random.nextInt(0, 6); "Math Quiz" -> 5; else -> 2 }; runCatching { repository.claimReward(game.title.lowercase().replace(" ", "").removeSuffix("card").removeSuffix("wheel"), amount) }.onSuccess { toast = "+$amount coins earned"; reload() }.onFailure { toast = if (it.message.orEmpty().contains("daily_limit")) "Daily limit reached" else "Reward unavailable" } } }
+    fun reward(game: Game) { scope.launch { val amount = when (game.title) { "Spin Wheel" -> Random.nextInt(1, 11); "Scratch Card" -> Random.nextInt(0, 6); "Math Quiz" -> 5; else -> 2 }; runCatching { repository.claimReward(gameTypeFor(game.title), amount) }.onSuccess { toast = "+$amount coins earned"; reload() }.onFailure { toast = if (it.message.orEmpty().contains("daily_limit")) "Daily limit reached" else "Reward unavailable" } } }
     Scaffold(containerColor = Ink, bottomBar = { NavigationBar(containerColor = Panel) { listOf("Home" to Icons.Default.Home, "Earn" to Icons.Default.Bolt, "Wallet" to Icons.Default.AccountBalanceWallet, "Profile" to Icons.Default.Person).forEachIndexed { i, item -> NavigationBarItem(tab == i, { tab = i }, icon = { Icon(item.second, null) }, label = { Text(item.first) }) } } }) { pad ->
         Box(Modifier.fillMaxSize().padding(pad)) {
             if (session.loading && profile == null) CircularProgressIndicator(Modifier.align(Alignment.Center), color = Purple)
