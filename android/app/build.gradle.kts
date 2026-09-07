@@ -8,6 +8,8 @@ plugins {
 android { namespace = "com.lrewards.app"; compileSdk = 35
     defaultConfig { applicationId = "com.lrewards.app"; minSdk = 26; targetSdk = 35; versionCode = 1; versionName = "1.0" }
     buildFeatures { compose = true; buildConfig = true }
+    buildConfigField("String", "SUPABASE_URL", "\"${project.findProperty("supabaseUrl") ?: "https://xgwprwljmrutkrtmcdff.supabase.co"}\"")
+    buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${project.findProperty("supabasePublishableKey") ?: ""}\"")
     buildTypes { release { isMinifyEnabled = true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") } }
 }
 
@@ -17,6 +19,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.01.00"))
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
