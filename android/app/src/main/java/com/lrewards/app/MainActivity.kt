@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.runtime.*
+import com.lrewards.app.data.RewardsRepository
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -48,7 +50,8 @@ data class Transaction(val title: String, val date: String, val amount: String)
 }
 
 @Composable fun AuthScreen(onSuccess: (String) -> Unit) {
-    var signup by remember { mutableStateOf(false) }; var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }; var name by remember { mutableStateOf("") }
+    var signup by remember { mutableStateOf(false) }; var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }; var name by remember { mutableStateOf("") }; var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope(); val repository = remember { RewardsRepository() }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Ink, Color(0xFF201543)))), contentAlignment = Alignment.Center) {
         Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("L", color = Blue, fontSize = 58.sp, fontWeight = FontWeight.Black)
@@ -57,7 +60,8 @@ data class Transaction(val title: String, val date: String, val amount: String)
             if (signup) OutlinedTextField(name, { name = it }, label = { Text("Display name") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(password, { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
-            Button(onClick = { onSuccess(name.ifBlank { "Rewarder" }) }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Purple)) { Text(if (signup) "Create account" else "Sign in", fontWeight = FontWeight.Bold) }
+            error?.let { Text(it, color = Color(0xFFFCA5A5), textAlign = TextAlign.Center) }
+            Button(onClick = { scope.launch { runCatching { if (signup) repository.signUp(email.trim(), password, name.ifBlank { "Rewarder" }) else repository.signIn(email.trim(), password) }.onSuccess { if (signup) error = "Check your email to confirm your account." else onSuccess(name.ifBlank { "Rewarder" }) }.onFailure { error = "Unable to complete authentication. Please check your details and try again." } } }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp), colors = ButtonDefaults.buttonColors(containerColor = Purple)) { Text(if (signup) "Create account" else "Sign in", fontWeight = FontWeight.Bold) }
             TextButton({ signup = !signup }) { Text(if (signup) "Already have an account? Sign in" else "New here? Create an account") }
         }
     }
