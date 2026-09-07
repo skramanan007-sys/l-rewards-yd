@@ -18,6 +18,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.runtime.*
 import com.lrewards.app.data.RewardsRepository
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -68,7 +70,7 @@ data class Transaction(val title: String, val date: String, val amount: String)
 }
 
 @Composable fun RewardsShell(displayName: String, onSignOut: () -> Unit) {
-    var tab by remember { mutableIntStateOf(0) }; var balance by remember { mutableIntStateOf(2480) }; var toast by remember { mutableStateOf<String?>(null) }
+    var tab by remember { mutableIntStateOf(0) }; var balance by remember { mutableIntStateOf(2480) }; var toast by remember { mutableStateOf<String?>(null) }; val scope = rememberCoroutineScope(); val repository = remember { RewardsRepository() }
     val games = listOf(Game("Spin Wheel", "Lucky spin", "1–10 coins", "5 left", Icons.Default.Refresh, Purple), Game("Scratch Card", "Reveal a prize", "0–5 coins", "3 left", Icons.Default.Star, Color(0xFFF59E0B)), Game("Captcha", "Quick challenge", "+2 coins", "3 left", Icons.Default.Lock, Blue), Game("Math Quiz", "Five questions", "+5 coins", "2 left", Icons.Default.School, Mint))
     Scaffold(containerColor = Ink, bottomBar = { NavigationBar(containerColor = Panel) { listOf("Home" to Icons.Default.Home, "Earn" to Icons.Default.Bolt, "Wallet" to Icons.Default.AccountBalanceWallet, "Profile" to Icons.Default.Person).forEachIndexed { i, p -> NavigationBarItem(selected = tab == i, onClick = { tab = i }, icon = { Icon(p.second, null) }, label = { Text(p.first) }) } } }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
