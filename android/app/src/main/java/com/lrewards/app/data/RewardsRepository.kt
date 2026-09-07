@@ -10,10 +10,13 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @Serializable
-data class Profile(val id: String, val email: String, val display_name: String, val coins: Int, val created_at: String? = null)
+data class Profile(val id: String, val email: String, val display_name: String, val coins: Int, val created_at: String? = null, val is_admin: Boolean = false, val is_banned: Boolean = false)
 
 @Serializable
 data class Transaction(val id: String, val user_id: String, val type: String, val amount: Int, val created_at: String)
+
+@Serializable
+data class Redemption(val id: String, val user_id: String, val reward_type: String, val amount: Int, val status: String, val destination: String, val created_at: String)
 
 class RewardsRepository {
     private val supabase = SupabaseClientProvider.client
@@ -42,6 +45,17 @@ class RewardsRepository {
     }).decodeAs()
 
     suspend fun transactions(userId: String): List<Transaction> = supabase.from("transactions").select {
+        filter { eq("user_id", userId) }
+    }.decodeList()
+
+    suspend fun requestRedemption(rewardType: String, amount: Int, destination: String): Redemption =
+        supabase.rpc("request_redemption", buildJsonObject {
+            put("p_reward_type", rewardType)
+            put("p_amount", amount)
+            put("p_destination", destination)
+        }).decodeAs()
+
+    suspend fun redemptions(userId: String): List<Redemption> = supabase.from("redemptions").select {
         filter { eq("user_id", userId) }
     }.decodeList()
 }
