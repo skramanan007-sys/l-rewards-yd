@@ -39,10 +39,10 @@ class RewardsRepository {
 
     suspend fun currentProfile(): Profile? {
         val id = supabase.auth.currentUserOrNull()?.id ?: return null
-        return supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingleOrNull<Profile>()
+        return supabase.from("profiles").select { eq("id", id) }.decodeSingleOrNull<Profile>()
     }
 
-    suspend fun claimReward(gameType: String, amount: Int): JsonObject = supabase.rpc("claim_reward", buildJsonObject {
+    suspend fun claimReward(gameType: String, amount: Int): JsonObject = supabase.rpc("claim_reward", parameters = buildJsonObject {
         put("p_game_type", gameType)
         put("p_amount", amount)
     }).decodeAs()
@@ -50,43 +50,43 @@ class RewardsRepository {
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
     suspend fun transactions(userId: String): List<Transaction> = supabase.from("transactions").select {
-        filter { eq("user_id", userId) }
+        eq("user_id", userId)
     }.decodeList()
 
     suspend fun updateProfile(displayName: String): Profile {
         val id = currentUserId() ?: error("not_authenticated")
         return supabase.from("profiles").update({ set("display_name", displayName.trim()) }) {
-            filter { eq("id", id) }
+            eq("id", id)
         }.decodeSingle()
     }
 
     suspend fun requestRedemption(rewardType: String, amount: Int, destination: String): Redemption =
-        supabase.rpc("request_redemption", buildJsonObject {
+        supabase.rpc("request_redemption", parameters = buildJsonObject {
             put("p_reward_type", rewardType)
             put("p_amount", amount)
             put("p_destination", destination)
         }).decodeAs()
 
     suspend fun redemptions(userId: String): List<Redemption> = supabase.from("redemptions").select {
-        filter { eq("user_id", userId) }
+        eq("user_id", userId)
     }.decodeList()
 
-    suspend fun adminMetrics(): AdminMetrics = supabase.rpc("admin_metrics").decodeAs()
+    suspend fun adminMetrics(): AdminMetrics = supabase.rpc("admin_metrics", parameters = emptyMap<String, String>()).decodeAs()
 
     suspend fun adminAdjustCoins(userId: String, amount: Int): Profile =
-        supabase.rpc("admin_set_user_coins", buildJsonObject {
+        supabase.rpc("admin_set_user_coins", parameters = buildJsonObject {
             put("p_user_id", userId)
             put("p_amount", amount)
         }).decodeAs()
 
     suspend fun adminSetBanned(userId: String, banned: Boolean): Profile =
-        supabase.rpc("admin_set_banned", buildJsonObject {
+        supabase.rpc("admin_set_banned", parameters = buildJsonObject {
             put("p_user_id", userId)
             put("p_banned", banned)
         }).decodeAs()
 
     suspend fun adminSetRedemptionStatus(redemptionId: String, status: String): Redemption =
-        supabase.rpc("admin_set_redemption_status", buildJsonObject {
+        supabase.rpc("admin_set_redemption_status", parameters = buildJsonObject {
             put("p_redemption_id", redemptionId)
             put("p_status", status)
         }).decodeAs()
