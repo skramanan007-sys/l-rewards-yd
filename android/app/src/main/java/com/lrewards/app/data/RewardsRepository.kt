@@ -18,6 +18,9 @@ data class Transaction(val id: String, val user_id: String, val type: String, va
 @Serializable
 data class Redemption(val id: String, val user_id: String, val reward_type: String, val amount: Int, val status: String, val destination: String, val created_at: String)
 
+@Serializable
+data class AdminMetrics(val total_users: Int, val total_coins: Int, val pending_withdrawals: Int)
+
 class RewardsRepository {
     private val supabase = SupabaseClientProvider.client
 
@@ -60,4 +63,24 @@ class RewardsRepository {
     suspend fun redemptions(userId: String): List<Redemption> = supabase.from("redemptions").select {
         filter { eq("user_id", userId) }
     }.decodeList()
+
+    suspend fun adminMetrics(): AdminMetrics = supabase.rpc("admin_metrics").decodeAs()
+
+    suspend fun adminAdjustCoins(userId: String, amount: Int): Profile =
+        supabase.rpc("admin_set_user_coins", buildJsonObject {
+            put("p_user_id", userId)
+            put("p_amount", amount)
+        }).decodeAs()
+
+    suspend fun adminSetBanned(userId: String, banned: Boolean): Profile =
+        supabase.rpc("admin_set_banned", buildJsonObject {
+            put("p_user_id", userId)
+            put("p_banned", banned)
+        }).decodeAs()
+
+    suspend fun adminSetRedemptionStatus(redemptionId: String, status: String): Redemption =
+        supabase.rpc("admin_set_redemption_status", buildJsonObject {
+            put("p_redemption_id", redemptionId)
+            put("p_status", status)
+        }).decodeAs()
 }
