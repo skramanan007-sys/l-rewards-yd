@@ -39,7 +39,7 @@ class RewardsRepository {
 
     suspend fun currentProfile(): Profile? {
         val id = supabase.auth.currentUserOrNull()?.id ?: return null
-        return supabase.from("profiles").select { eq("id", id) }.decodeSingleOrNull<Profile>()
+        return supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingleOrNull<Profile>()
     }
 
     suspend fun claimReward(gameType: String, amount: Int): JsonObject = supabase.rpc("claim_reward", parameters = buildJsonObject {
@@ -50,13 +50,13 @@ class RewardsRepository {
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
     suspend fun transactions(userId: String): List<Transaction> = supabase.from("transactions").select {
-        eq("user_id", userId)
+        filter { eq("user_id", userId) }
     }.decodeList()
 
     suspend fun updateProfile(displayName: String): Profile {
         val id = currentUserId() ?: error("not_authenticated")
         return supabase.from("profiles").update({ set("display_name", displayName.trim()) }) {
-            eq("id", id)
+            filter { eq("id", id) }
         }.decodeSingle()
     }
 
@@ -68,7 +68,7 @@ class RewardsRepository {
         }).decodeAs()
 
     suspend fun redemptions(userId: String): List<Redemption> = supabase.from("redemptions").select {
-        eq("user_id", userId)
+        filter { eq("user_id", userId) }
     }.decodeList()
 
     suspend fun adminMetrics(): AdminMetrics = supabase.rpc("admin_metrics", parameters = emptyMap<String, String>()).decodeAs()
