@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun LRewardsApp(auth: AuthViewModel = viewModel()) {
     val state by auth.state.collectAsState()
-    MaterialTheme { if (state.signedIn) RewardsHome(state.email, auth::signOut) else AuthForm(state, auth) }
+    MaterialTheme { if (state.signedIn) RewardsHome(state.email, auth::signOut, auth) else AuthForm(state, auth) }
 }
 
 @Composable
@@ -113,7 +113,7 @@ private fun AuthForm(state: AuthState, auth: AuthViewModel) {
 private data class Game(val title: String, val subtitle: String, val reward: String, val limit: String, val icon: ImageVector, val color: Color)
 
 @Composable
-private fun RewardsHome(email: String, signOut: () -> Unit) {
+private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel) {
     var tab by remember { mutableIntStateOf(0) }
     var coins by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Game?>(null) }
@@ -133,7 +133,7 @@ private fun RewardsHome(email: String, signOut: () -> Unit) {
             Spacer(Modifier.weight(1f))
             BottomBar(tab) { tab = it }
         }
-        selected?.let { game -> GameDialog(game, onDismiss = { selected = null }) { reward -> coins += reward; selected = null } }
+        selected?.let { game -> GameDialog(game, onDismiss = { selected = null }) { reward -> auth.playGame(game.title.toGameType(), reward) { balance, error -> if (balance != null) coins = balance; selected = null } } }
     }
 }
 
@@ -152,5 +152,12 @@ private fun RewardsHome(email: String, signOut: () -> Unit) {
 @Composable private fun ProfilePage(email: String, signOut: () -> Unit) { Column { Text("Profile", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Manage your L Rewards account", color = Muted); Spacer(Modifier.height(16.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("ACCOUNT", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text(email, color = Color.White, modifier = Modifier.padding(top = 8.dp)); Spacer(Modifier.height(18.dp)); Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = SoftGreen)) { Text("Sign out", color = Color.White) } } } } }
 
 @Composable private fun BottomBar(selected: Int, onSelect: (Int) -> Unit) { Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(6.dp), Arrangement.SpaceAround) { listOf(Icons.Rounded.Home, Icons.Rounded.AutoAwesome, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.Person).forEachIndexed { index, icon -> Box(Modifier.size(52.dp).clip(RoundedCornerShape(18.dp)).clickable { onSelect(index) }.background(if (selected == index) Green.copy(.2f) else Color.Transparent), Alignment.Center) { Icon(icon, null, tint = if (selected == index) Lime else Muted) } } } } }
+
+private fun String.toGameType(): String = when (this) {
+    "Spin Wheel" -> "spin"
+    "Scratch Card" -> "scratch"
+    "Captcha" -> "captcha"
+    else -> "quiz"
+}
 
 private fun String.take(n: Int): String = if (length <= n) this else substring(0, n)

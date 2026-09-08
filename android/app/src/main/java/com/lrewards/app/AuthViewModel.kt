@@ -51,4 +51,10 @@ class AuthViewModel(
         runCatching { repository.signOut() }
         _state.value = AuthState()
     }
+
+    fun playGame(gameType: String, amount: Int, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
+        runCatching { repository.playGame(gameType, amount) }
+            .onSuccess { result -> onComplete(result["balance"]?.toString()?.toIntOrNull(), null) }
+            .onFailure { error -> onComplete(null, error.message ?: "Unable to claim reward") }
+    }
 }
