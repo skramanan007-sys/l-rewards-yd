@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -58,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -283,19 +285,41 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                         }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (spinning) "SPINNING…" else "SPIN WHEEL") }
                     }
                     "Scratch Card" -> {
-                        Text("Choose a card to reveal your prize", color = Mint)
-                        Spacer(Modifier.height(8.dp))
-                        (0 until 9).chunked(3).forEach { row ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                row.forEach { index ->
-                                    Card(onClick = { scratchIndex = index }, colors = CardDefaults.cardColors(containerColor = if (scratchIndex == index) Green else Panel2), modifier = Modifier.size(72.dp)) {
-                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(if (scratchIndex == index) "${index % 6}" else "?", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black) }
+                        val revealed = remember { mutableStateOf(false) }
+                        var scratchProgress by remember { mutableIntStateOf(0) }
+                        val reward = remember { Random.nextInt(0, 6) }
+                        Text("Scratch the silver panel to reveal your prize", color = Mint)
+                        Spacer(Modifier.height(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(230.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Brush.linearGradient(listOf(Color(0xFF173D2A), Color(0xFF2C8B54))))
+                                .pointerInput(Unit) {
+                                    detectDragGestures { _, position ->
+                                        if (!revealed.value) {
+                                            scratchProgress = (scratchProgress + 1).coerceAtMost(30)
+                                            if (scratchProgress >= 18) revealed.value = true
+                                        }
                                     }
-                                }
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("$reward", color = Lime, fontSize = 54.sp, fontWeight = FontWeight.Black)
+                                Text("COINS", color = Color.White, fontWeight = FontWeight.Bold)
                             }
-                            Spacer(Modifier.height(6.dp))
+                            if (!revealed.value) {
+                                Canvas(Modifier.fillMaxSize()) {
+                                    drawRoundRect(Color(0xFFB7C0BA), cornerRadius = androidx.compose.ui.geometry.CornerRadius(24f, 24f))
+                                    drawCircle(Color(0xFFE5ECE8), radius = 34f, center = center)
+                                    drawCircle(Color(0xFF9AA8A0), radius = 30f, center = center)
+                                }
+                                Text("SCRATCH", color = Ink, fontWeight = FontWeight.Black)
+                            }
                         }
-                        if (scratchIndex >= 0) Button(onClick = { onReward(scratchIndex % 6) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("COLLECT ${scratchIndex % 6} COINS") }
+                        Text(if (revealed.value) "Prize revealed" else "Keep rubbing to reveal", color = if (revealed.value) Lime else Muted, fontSize = 13.sp)
+                        if (revealed.value) Button(onClick = { onReward(reward) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("COLLECT $reward COINS") }
                     }
                     "Captcha" -> {
                         Text(captcha, color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
