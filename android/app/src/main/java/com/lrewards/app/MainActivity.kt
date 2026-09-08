@@ -444,18 +444,18 @@ private fun ProfilePage(email: String, signOut: () -> Unit) {
         }
         Spacer(Modifier.height(18.dp))
         Text("PROFILE & SETTINGS", color = Mint, fontWeight = FontWeight.Bold)
-        SettingRow("Referral program", "Invite friends and earn bonus coins")
-        SettingRow("Notifications", "Reward and withdrawal updates")
-        SettingRow("Help center", "Get support for your account")
+        SettingRow("Referral program", "Invite friends and earn bonus coins", Icons.Rounded.AutoAwesome)
+        SettingRow("Notifications", "Reward and withdrawal updates", Icons.Rounded.CheckCircle)
+        SettingRow("Help center", "Get support for your account", Icons.Rounded.QuestionMark)
         Spacer(Modifier.height(16.dp))
         Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("SIGN OUT") }
     }
 }
 
 @Composable
-private fun SettingRow(title: String, detail: String) {
+private fun SettingRow(title: String, detail: String, icon: ImageVector) {
     Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(8.dp).background(Lime, CircleShape))
+        Box(Modifier.size(38.dp).background(Lime.copy(alpha = .14f), CircleShape), contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = Lime, modifier = Modifier.size(19.dp)) }
         Spacer(Modifier.width(12.dp))
         Column { Text(title, color = Color.White, fontWeight = FontWeight.Bold); Text(detail, color = Muted, fontSize = 12.sp) }
     }
