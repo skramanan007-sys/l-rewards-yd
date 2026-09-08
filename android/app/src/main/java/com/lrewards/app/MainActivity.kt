@@ -28,7 +28,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.CardGiftcard
@@ -48,7 +47,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -159,8 +157,6 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
     var selectedGame by remember { mutableStateOf<Game?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     val wallet by auth.wallet.collectAsState()
-    val admin by auth.admin.collectAsState()
-    val isAdmin = email.endsWith("@lrewards.app") || email.startsWith("admin@")
     val coins = wallet.balance
     val games = remember {
         listOf(
@@ -197,11 +193,10 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
                     }
                 }
                 4 -> ProfilePage(email, auth::signOut)
-                5 -> if (isAdmin) AdminPage(admin) else ProfilePage(email, auth::signOut)
                 else -> ProfilePage(email, auth::signOut)
             }
             Spacer(Modifier.weight(1f))
-            BottomBar(tab, isAdmin) { tab = it; if (it == 5) auth.loadAdmin() }
+            BottomBar(tab) { tab = it }
         }
         selectedGame?.let { game ->
             GameExperience(game, onDismiss = { selectedGame = null }) { amount ->
@@ -445,33 +440,6 @@ private fun RedeemPage(coins: Int, onRedeem: (String, Int, String) -> Unit) {
 }
 
 @Composable
-private fun AdminPage(state: AdminState) {
-    Column {
-        Text("Admin panel", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
-        Text("L Rewards operations overview", color = Muted)
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            AdminStat("Users", state.users.size.toString(), Modifier.weight(1f))
-            AdminStat("Earned", state.transactions.size.toString(), Modifier.weight(1f))
-            AdminStat("Redeems", state.redemptions.size.toString(), Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(18.dp))
-        Text("RECENT REDEMPTIONS", color = Mint, fontWeight = FontWeight.Bold)
-        if (state.redemptions.isEmpty()) Text("No redemption requests", color = Muted, modifier = Modifier.padding(top = 8.dp)) else state.redemptions.take(12).forEach { item ->
-            HistoryRow(item["reward_type"]?.toString()?.trim('"') ?: item["reward"]?.toString()?.trim('"') ?: "Redemption", item["status"]?.toString()?.trim('"') ?: "pending", item["created_at"]?.toString()?.trim('"') ?: "", Color(0xFFFFB95C))
-        }
-        Spacer(Modifier.height(16.dp))
-        Text("RECENT USERS", color = Mint, fontWeight = FontWeight.Bold)
-        state.users.take(8).forEach { user -> Text(user["email"]?.toString()?.trim('"') ?: user["display_name"]?.toString()?.trim('"') ?: "User", color = Color.White, modifier = Modifier.padding(top = 8.dp)) }
-    }
-}
-
-@Composable
-private fun AdminStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = modifier) { Column(Modifier.padding(12.dp)) { Text(label, color = Muted, fontSize = 11.sp); Text(value, color = Lime, fontSize = 22.sp, fontWeight = FontWeight.Black) } }
-}
-
-@Composable
 private fun HistoryRow(title: String, amount: String, detail: String, accent: Color) {
     Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(34.dp).background(accent.copy(alpha = .18f), CircleShape), contentAlignment = Alignment.Center) { Text("+", color = accent, fontWeight = FontWeight.Black) }
@@ -514,12 +482,9 @@ private fun SettingRow(title: String, detail: String, icon: ImageVector) {
 }
 
 @Composable
-private fun BottomBar(selected: Int, isAdmin: Boolean, onSelected: (Int) -> Unit) {
+private fun BottomBar(selected: Int, onSelected: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(8.dp), horizontalArrangement = Arrangement.SpaceAround) {
-        val icons = buildList {
-            addAll(listOf(Icons.Rounded.Home, Icons.Rounded.SportsEsports, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.CardGiftcard, Icons.Rounded.Person))
-            if (isAdmin) add(Icons.Rounded.AdminPanelSettings)
-        }
+        val icons = listOf(Icons.Rounded.Home, Icons.Rounded.SportsEsports, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.CardGiftcard, Icons.Rounded.Person)
         icons.forEachIndexed { index, icon ->
             Icon(icon, contentDescription = null, tint = if (selected == index) Lime else Muted, modifier = Modifier.size(30.dp).clickable { onSelected(index) }.padding(5.dp))
         }
