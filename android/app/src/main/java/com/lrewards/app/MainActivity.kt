@@ -85,7 +85,7 @@ private fun AuthForm(state: AuthState, auth: AuthViewModel) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Ink, Color(0xFF123F2A))).padding(24.dp)), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Ink, Color(0xFF123F2A)))).padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("L", color = Ink, fontSize = 36.sp, fontWeight = FontWeight.Black, modifier = Modifier.size(62.dp).background(Brush.linearGradient(listOf(Lime, Green)), CircleShape).padding(10.dp))
             Text("L REWARDS", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
