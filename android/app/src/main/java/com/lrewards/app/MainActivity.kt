@@ -30,7 +30,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.QuestionMark
-import androidx.compose.material.icons.rounded.Scratchpad
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -120,7 +119,7 @@ private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel)
     var showRedemption by remember { mutableStateOf(false) }
     val games = listOf(
         Game("Spin Wheel", "Try your luck", "1–10 coins", "5 plays", Icons.Rounded.Casino, Lime),
-        Game("Scratch Card", "Reveal a prize", "0–5 coins", "3 plays", Icons.Rounded.Scratchpad, Color(0xFFFFB95C)),
+        Game("Scratch Card", "Reveal a prize", "0–5 coins", "3 plays", Icons.Rounded.AutoAwesome, Color(0xFFFFB95C)),
         Game("Captcha", "Quick challenge", "2 coins", "3 plays", Icons.Rounded.CheckCircle, Green),
         Game("Math Quiz", "Five questions", "5 coins", "2 plays", Icons.Rounded.QuestionMark, Color(0xFF71C7FF))
     )
@@ -180,7 +179,9 @@ private fun WalletPage(coins: Int, onRedeem: () -> Unit) {
             }
         }
     }
-}\n\n@Composable private fun RedemptionDialog(coins: Int, onDismiss: () -> Unit, onRequest: (String, Int) -> Unit) { AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text("Request a reward", color = Color.White, fontWeight = FontWeight.Black) }, text = { Column { Text("Your balance: $coins coins", color = Mint); Spacer(Modifier.height(10.dp)); Text("Choose a 100-coin digital reward. An admin will review it.", color = Muted) } }, confirmButton = { Button(onClick = { onRequest("Digital reward", 100) }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Request") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Mint) } }) }
+}
+
+@Composable private fun RedemptionDialog(coins: Int, onDismiss: () -> Unit, onRequest: (String, Int) -> Unit) { AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text("Request a reward", color = Color.White, fontWeight = FontWeight.Black) }, text = { Column { Text("Your balance: $coins coins", color = Mint); Spacer(Modifier.height(10.dp)); Text("Choose a 100-coin digital reward. An admin will review it.", color = Muted) } }, confirmButton = { Button(onClick = { onRequest("Digital reward", 100) }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Request") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Mint) } }) }
 
 @Composable private fun ProfilePage(email: String, signOut: () -> Unit) { Column { Text("Profile", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Manage your L Rewards account", color = Muted); Spacer(Modifier.height(16.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("ACCOUNT", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text(email, color = Color.White, modifier = Modifier.padding(top = 8.dp)); Spacer(Modifier.height(18.dp)); Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = SoftGreen)) { Text("Sign out", color = Color.White) } } } } }
 
