@@ -251,8 +251,8 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
     var scratchIndex by remember { mutableIntStateOf(-1) }
     var captchaInput by remember { mutableStateOf("") }
     var captchaError by remember { mutableStateOf<String?>(null) }
-    var questionIndex by remember { mutableIntStateOf(0) }
-    var quizScore by remember { mutableIntStateOf(0) }
+    var quizChoices by remember { mutableStateOf(List(5) { "" }) }
+    var quizError by remember { mutableStateOf<String?>(null) }
     val rotation = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val captcha = remember { (1..6).map { "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".random() }.joinToString("") }
@@ -349,14 +349,19 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                         Button(onClick = { if (captchaInput.trim().equals(captcha, ignoreCase = true)) onReward(2) else { captchaError = "Code does not match. Try again."; captchaInput = "" } }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("VERIFY CAPTCHA · +2") }
                     }
                     else -> {
-                        Text("Question ${questionIndex + 1} of 5", color = Mint, fontWeight = FontWeight.Bold)
-                        Text(quiz[questionIndex].first, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                        quiz[questionIndex].second.forEach { option ->
-                            Button(onClick = {
-                                val nextScore = quizScore + if (option == answers[questionIndex]) 1 else 0
-                                if (questionIndex == 4) onReward(if (nextScore == 5) 5 else 0) else { quizScore = nextScore; questionIndex++ }
-                            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Panel2)) { Text(option, color = Color.White) }
+                        Text("Answer all five questions", color = Mint, fontWeight = FontWeight.Bold)
+                        quiz.forEachIndexed { index, question ->
+                            Column(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+                                Text("${index + 1}. ${question.first}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+                                    question.second.forEach { option ->
+                                        Button(onClick = { quizChoices = quizChoices.toMutableList().also { it[index] = option }; quizError = null }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = if (quizChoices[index] == option) Green else Panel2, contentColor = Color.White)) { Text(option) }
+                                    }
+                                }
+                            }
                         }
+                        quizError?.let { Text(it, color = Color(0xFFFF9E91), fontSize = 12.sp) }
+                        Button(onClick = { if (quizChoices.any(String::isBlank)) quizError = "Answer all five questions first." else if (quizChoices == answers) onReward(5) else { quizError = "Some answers are incorrect. Try again."; quizChoices = List(5) { "" } } }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("CHECK QUIZ · +5") }
                     }
                 }
             }
