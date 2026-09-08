@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -273,6 +274,9 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                                 val wheelColors = listOf(Lime, Green, Color(0xFF25A7A0), Color(0xFF4BA3FF), Color(0xFF8D6BFF), Color(0xFFFFB95C), Color(0xFFFF6B81), Color(0xFF42D778), Color(0xFF71C7FF), Color(0xFFD9F99D))
                                 wheelColors.forEachIndexed { index, color ->
                                     drawArc(color, index * slice - 90f, slice, true)
+                                    val angle = Math.toRadians(index * slice - 72.0)
+                                    val labelCenter = center + Offset((size.minDimension * .34f * kotlin.math.cos(angle)).toFloat(), (size.minDimension * .34f * kotlin.math.sin(angle)).toFloat())
+                                    drawCircle(Color.Black.copy(alpha = .22f), radius = 17f, center = labelCenter)
                                 }
                                 drawCircle(Panel, radius = 38f, center = center)
                                 drawCircle(Lime, radius = 7f, center = center)
@@ -284,15 +288,18 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                         Button(enabled = !spinning, onClick = {
                             spinning = true
                             scope.launch {
-                                rotation.animateTo(rotation.value + 1440f + Random.nextInt(0, 360), tween(1800))
+                                val reward = Random.nextInt(1, 11)
+                                val landingOffset = (10 - reward) * 36 + 18
+                                rotation.animateTo(rotation.value + 1440f + landingOffset, tween(2000))
                                 spinning = false
-                                onReward(Random.nextInt(1, 11))
+                                onReward(reward)
                             }
                         }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (spinning) "SPINNING…" else "SPIN WHEEL") }
                     }
                     "Scratch Card" -> {
                         val revealed = remember { mutableStateOf(false) }
                         var scratchProgress by remember { mutableIntStateOf(0) }
+                        val scratchMarks = remember { androidx.compose.runtime.mutableStateListOf<Offset>() }
                         val reward = remember { Random.nextInt(0, 6) }
                         Text("Scratch the silver panel to reveal your prize", color = Mint)
                         Spacer(Modifier.height(10.dp))
@@ -304,8 +311,9 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                                 .pointerInput(Unit) {
                                     detectDragGestures { _, position ->
                                         if (!revealed.value) {
-                                            scratchProgress = (scratchProgress + 1).coerceAtMost(30)
-                                            if (scratchProgress >= 18) revealed.value = true
+                                            scratchMarks.add(position)
+                                            scratchProgress = (scratchProgress + 1).coerceAtMost(40)
+                                            if (scratchProgress >= 24) revealed.value = true
                                         }
                                     }
                                 },
@@ -320,6 +328,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                                     drawRoundRect(Color(0xFFB7C0BA), cornerRadius = androidx.compose.ui.geometry.CornerRadius(24f, 24f))
                                     drawCircle(Color(0xFFE5ECE8), radius = 34f, center = center)
                                     drawCircle(Color(0xFF9AA8A0), radius = 30f, center = center)
+                                    scratchMarks.forEach { mark -> drawCircle(Color.Transparent, 24f, mark, blendMode = BlendMode.Clear) }
                                 }
                                 Text("SCRATCH", color = Ink, fontWeight = FontWeight.Black)
                             }
