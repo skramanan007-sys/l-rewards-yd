@@ -39,12 +39,13 @@ class RewardsRepository {
             },
         ).decodeAs()
 
-    suspend fun requestRedemption(rewardType: String, cost: Int): JsonObject =
+    suspend fun requestRedemption(rewardType: String, cost: Int, destination: String): JsonObject =
         supabase.postgrest.rpc(
-            "request_redemption",
+            "redeem_reward",
             parameters = buildJsonObject {
-                put("p_reward_type", JsonPrimitive(rewardType))
+                put("p_reward", JsonPrimitive(rewardType))
                 put("p_cost", JsonPrimitive(cost))
+                put("p_destination", JsonPrimitive(destination))
             },
         ).decodeAs()
 

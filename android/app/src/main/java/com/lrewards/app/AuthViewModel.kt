@@ -78,8 +78,8 @@ class AuthViewModel(
             }
     }
 
-    fun requestRedemption(type: String, cost: Int, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
-        runCatching { repository.requestRedemption(type, cost) }
+    fun requestRedemption(type: String, cost: Int, destination: String, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
+        runCatching { repository.requestRedemption(type, cost, destination) }
             .onSuccess { result -> onComplete(result["balance"]?.toString()?.toIntOrNull(), null) }
             .onFailure { error -> onComplete(null, "Unable to request redemption") }
     }

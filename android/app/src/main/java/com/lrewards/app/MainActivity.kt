@@ -47,6 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -186,8 +187,8 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
             when (tab) {
                 0, 1 -> EarnPage(games) { selectedGame = it }
                 2 -> WalletPage(coins, wallet.transactions)
-                3 -> RedeemPage(coins) { type ->
-                    auth.requestRedemption(type, 100) { balance, error ->
+                3 -> RedeemPage(coins) { type, cost, destination ->
+                    auth.requestRedemption(type, cost, destination) { balance, error ->
                         if (balance != null) coins = balance
                         message = error ?: "${type.replaceFirstChar { it.uppercase() }} redemption requested"
                         auth.loadWallet()
@@ -410,20 +411,28 @@ private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json
 }
 
 @Composable
-private fun RedeemPage(coins: Int, onRedeem: (String) -> Unit) {
+private fun RedeemPage(coins: Int, onRedeem: (String, Int, String) -> Unit) {
+    var destination by remember { mutableStateOf("") }
+    val options = listOf(
+        Triple("upi", "UPI Cash", listOf(1000 to "₹10", 2000 to "₹20", 3000 to "₹30")),
+        Triple("amazon", "Amazon Gift Cards", listOf(1000 to "₹10", 2500 to "₹25", 5000 to "₹50")),
+        Triple("google_play", "Google Play Gift Cards", listOf(1000 to "₹10", 2500 to "₹25", 5000 to "₹50")),
+    )
     Column {
-        Text("Redeem rewards", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
-        Text("Choose where you want to receive your reward", color = Muted)
+        Text("Redeem", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+        Text("Choose a real payout reward", color = Muted)
+        Text("100 coins = ₹1", color = Lime, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 8.dp))
+        Text("Your balance: $coins coins · ₹${"%.2f".format(coins / 100.0)} available value", color = Mint)
+        OutlinedTextField(destination, { destination = it }, label = { Text("UPI ID or gift-card email") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Green, unfocusedBorderColor = Muted), modifier = Modifier.fillMaxWidth().padding(top = 14.dp))
         Spacer(Modifier.height(18.dp))
-        Text("AVAILABLE", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
-        Text("Minimum redemption: 100 coins", color = Muted, fontSize = 12.sp)
-        Spacer(Modifier.height(18.dp))
-        listOf("upi" to "UPI", "amazon" to "Amazon Pay", "google_play" to "Google Play").forEach { (type, label) ->
-            Card(onClick = { if (coins >= 100) onRedeem(type) }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(46.dp).background(Green.copy(alpha = .16f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.AccountBalanceWallet, contentDescription = null, tint = Lime) }
-                    Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(label, color = Color.White, fontWeight = FontWeight.Black); Text(if (coins >= 100) "Redeem 100 coins" else "Need ${100 - coins} more coins", color = Muted, fontSize = 12.sp) }; Text("›", color = Lime, fontSize = 28.sp)
+        options.forEach { (type, label, payouts) ->
+            Text(label, color = Mint, fontSize = 18.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 10.dp, bottom = 8.dp))
+            payouts.forEach { (cost, value) ->
+                Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) { Text("$label $value", color = Color.White, fontWeight = FontWeight.Bold); Text("$cost coins · $value", color = Muted, fontSize = 12.sp) }
+                        Button(enabled = coins >= cost && destination.trim().length >= 3, onClick = { onRedeem(type, cost, destination.trim()) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (coins >= cost) "Redeem" else "Need more") }
+                    }
                 }
             }
         }
