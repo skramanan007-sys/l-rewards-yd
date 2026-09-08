@@ -1,5 +1,6 @@
 package com.lrewards.app
 
+import android.graphics.Paint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -62,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -102,8 +104,8 @@ private fun AuthForm(state: AuthState, auth: AuthViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedTextColor = Ink,
-        unfocusedTextColor = Ink,
+        focusedTextColor = Color.White,
+        unfocusedTextColor = Color.White,
         focusedBorderColor = Green,
         unfocusedBorderColor = Color(0xFF78B68B),
         focusedLabelColor = Ink,
@@ -185,6 +187,7 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
                     auth.requestRedemption(type, 100) { balance, error ->
                         if (balance != null) coins = balance
                         message = error ?: "${type.replaceFirstChar { it.uppercase() }} withdrawal request submitted"
+                        auth.loadWallet()
                     }
                 }
                 else -> ProfilePage(email, auth::signOut)
@@ -197,6 +200,7 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
                 auth.playGame(game.name.toType(), amount) { balance, error ->
                     if (balance != null) coins = balance
                     message = error ?: "+$amount coins added"
+                    auth.loadWallet()
                     selectedGame = null
                 }
             }
@@ -280,12 +284,20 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                                     val angle = Math.toRadians(index * slice - 72.0)
                                     val labelCenter = center + Offset((size.minDimension * .34f * kotlin.math.cos(angle)).toFloat(), (size.minDimension * .34f * kotlin.math.sin(angle)).toFloat())
                                     drawCircle(Color.Black.copy(alpha = .22f), radius = 17f, center = labelCenter)
+                                    drawIntoCanvas { canvas ->
+                                        canvas.nativeCanvas.drawText(
+                                            "${index + 1}",
+                                            labelCenter.x - 8f,
+                                            labelCenter.y + 7f,
+                                            Paint().apply { color = android.graphics.Color.WHITE; textSize = 22f; textAlign = Paint.Align.CENTER; isFakeBoldText = true },
+                                        )
+                                    }
                                 }
                                 drawCircle(Panel, radius = 38f, center = center)
                                 drawCircle(Lime, radius = 7f, center = center)
                             }
                             Text("COINS", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                            Box(Modifier.align(Alignment.TopCenter).size(0.dp))
+                            Canvas(Modifier.align(Alignment.TopCenter).size(width = 34.dp, height = 42.dp)) { drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(size.width / 2f, size.height); lineTo(0f, 0f); lineTo(size.width, 0f); close() }, color = Color(0xFFFFD166)) }
                         }
                         Text("1  ·  2  ·  3  ·  4  ·  5  ·  6  ·  7  ·  8  ·  9  ·  10", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Button(enabled = !spinning, onClick = {

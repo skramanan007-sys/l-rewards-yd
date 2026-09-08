@@ -72,12 +72,15 @@ class AuthViewModel(
     fun playGame(gameType: String, amount: Int, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
         runCatching { repository.playGame(gameType, amount) }
             .onSuccess { result -> onComplete(result["balance"]?.toString()?.toIntOrNull(), null) }
-            .onFailure { error -> onComplete(null, error.message ?: "Unable to claim reward") }
+            .onFailure { error ->
+                val raw = error.message.orEmpty().lowercase()
+                onComplete(null, if (raw.contains("limit") || raw.contains("daily") || raw.contains("maximum")) "Limit reached for today" else "Unable to claim reward")
+            }
     }
 
     fun requestRedemption(type: String, cost: Int, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
         runCatching { repository.requestRedemption(type, cost) }
             .onSuccess { result -> onComplete(result["balance"]?.toString()?.toIntOrNull(), null) }
-            .onFailure { error -> onComplete(null, error.message ?: "Unable to request redemption") }
+            .onFailure { error -> onComplete(null, "Unable to request redemption") }
     }
 }
