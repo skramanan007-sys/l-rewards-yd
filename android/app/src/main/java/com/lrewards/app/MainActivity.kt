@@ -43,6 +43,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -133,7 +137,7 @@ private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel)
             Spacer(Modifier.weight(1f))
             BottomBar(tab) { tab = it }
         }
-        selected?.let { game -> GameDialog(game, onDismiss = { selected = null }) { reward -> auth.playGame(game.title.toGameType(), reward) { balance, error -> if (balance != null) coins = balance; selected = null } } }
+        selected?.let { game -> RealGameDialog(game, onDismiss = { selected = null }) { reward -> auth.playGame(game.title.toGameType(), reward) { balance, error -> if (balance != null) coins = balance; selected = null } } }
         if (showRedemption) RedemptionDialog(
             coins = coins,
             onDismiss = { showRedemption = false },
@@ -149,6 +153,40 @@ private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel)
 @Composable private fun EarnPage(games: List<Game>, onGame: (Game) -> Unit) { Column { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Bottom) { Column { Text("Earn coins", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Pick a challenge and keep your streak", color = Muted, fontSize = 13.sp) }; Text("TODAY", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Bold) }; Spacer(Modifier.height(16.dp)); LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(340.dp)) { items(games) { game -> GameCard(game) { onGame(game) } } }; Spacer(Modifier.height(18.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) { Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.SportsEsports, null, tint = Lime, modifier = Modifier.size(28.dp)); Spacer(Modifier.width(12.dp)); Column { Text("Daily streak", color = Color.White, fontWeight = FontWeight.Bold); Text("Play one game today to keep it alive", color = Muted, fontSize = 12.sp) } } } } }
 
 @Composable private fun GameCard(game: Game, onClick: () -> Unit) { Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.border(1.dp, game.color.copy(.22f), RoundedCornerShape(22.dp))) { Column(Modifier.padding(15.dp)) { Box(Modifier.size(44.dp).background(game.color.copy(.15f), CircleShape), Alignment.Center) { Icon(game.icon, null, tint = game.color) }; Spacer(Modifier.height(12.dp)); Text(game.title, color = Color.White, fontWeight = FontWeight.Bold); Text(game.subtitle, color = Muted, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text(game.reward, color = game.color, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text(game.limit, color = Muted, fontSize = 11.sp) } } } }
+
+@Composable
+private fun RealGameDialog(game: Game, onDismiss: () -> Unit, onReward: (Int) -> Unit) {
+    var answer by remember { mutableStateOf("") }
+    var selectedScratch by remember { mutableIntStateOf(-1) }
+    var spinning by remember { mutableStateOf(false) }
+    var rotation by remember { mutableStateOf(0f) }
+    var quizStep by remember { mutableIntStateOf(0) }
+    var quizScore by remember { mutableIntStateOf(0) }
+    val captcha = remember { "69Y67" }
+    val quiz = listOf("10 + 5 = ?" to listOf("12", "15", "17"), "9 + 9 = ?" to listOf("16", "18", "20"), "13 + 3 = ?" to listOf("14", "16", "23"), "9 + 2 = ?" to listOf("11", "13", "18"), "7 + 5 = ?" to listOf("10", "12", "15"))
+    val correct = listOf("15", "18", "16", "11", "12")
+    val scratch = listOf(0, 1, 2, 3, 4, 5, 1, 2, 3)
+    val animatedRotation by animateFloatAsState(rotation, tween(1100), label = "wheel")
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text(game.title, color = Color.White, fontWeight = FontWeight.Black) }, text = {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Complete this activity to earn coins", color = Muted)
+            Spacer(Modifier.height(10.dp))
+            when (game.title) {
+                "Spin Wheel" -> {
+                    Box(Modifier.size(220.dp).graphicsLayer { rotationZ = animatedRotation }.background(Brush.sweepGradient(listOf(Lime, Green, Color(0xFFFFC857), Green, Lime)), CircleShape), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("COINS", color = Ink, fontWeight = FontWeight.Black, fontSize = 18.sp); Text("1  2  3  4  5", color = Ink, fontSize = 11.sp) } }
+                    Text("Arrow decides the number under it", color = Mint, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+                "Scratch Card" -> {
+                    Text("Scratch the silver surface to reveal your coins", color = Mint, fontSize = 13.sp)
+                    Spacer(Modifier.height(10.dp))
+                    LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.height(180.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(9) { index -> Card(onClick = { if (selectedScratch == -1) selectedScratch = index }, colors = CardDefaults.cardColors(containerColor = if (selectedScratch == index) Green.copy(.35f) else Color(0xFF68756E)), shape = RoundedCornerShape(14.dp)) { Box(Modifier.height(52.dp), contentAlignment = Alignment.Center) { Text(if (selectedScratch == index) "${scratch[index]} COINS" else "?", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp) } } } }
+                }
+                "Captcha" -> { Text("SECURITY CHECK  +2 COINS", color = Lime, fontWeight = FontWeight.Bold); Text(captcha, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(10.dp)); OutlinedTextField(answer, { answer = it }, label = { Text("ENTER THE CODE") }) }
+                else -> { Text("Question ${quizStep + 1} of 5", color = Muted); Text(quiz[quizStep].first, color = Mint, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(8.dp)); quiz[quizStep].second.forEach { option -> Button(onClick = { if (option == correct[quizStep]) quizScore++ ; if (quizStep < 4) quizStep++ }, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), colors = ButtonDefaults.buttonColors(containerColor = SoftGreen, contentColor = Color.White)) { Text(option) } }; Text("Score: $quizScore", color = Muted, fontSize = 12.sp) }
+            }
+        }
+    }, confirmButton = { Button(onClick = { when (game.title) { "Spin Wheel" -> { spinning = true; rotation += 1440f; onReward((1..10).random()) }; "Scratch Card" -> onReward(scratch[selectedScratch]); "Captcha" -> if (answer.trim().equals(captcha, true)) onReward(2); "Math Quiz" -> if (quizStep == 4) onReward(5) } }, enabled = !spinning && (game.title != "Scratch Card" || selectedScratch >= 0) && (game.title != "Captcha" || answer.isNotBlank()) && (game.title != "Math Quiz" || quizStep == 4), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (game.title == "Captcha") "CHECK CAPTCHA +2" else if (game.title == "Math Quiz") "CHECK QUIZ +5" else if (game.title == "Spin Wheel") "SPIN THE WHEEL" else "REVEAL REWARD") }, dismissButton = { TextButton(onClick = onDismiss) { Text("Later", color = Mint) } })
+}
 
 @Composable
 private fun GameDialog(game: Game, onDismiss: () -> Unit, onReward: (Int) -> Unit) {
