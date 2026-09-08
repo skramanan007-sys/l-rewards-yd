@@ -22,11 +22,23 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.QuestionMark
+import androidx.compose.material.icons.rounded.Scratchpad
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -41,31 +53,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-private val Navy = Color(0xFF080D1D)
-private val Panel = Color(0xFF121A32)
-private val Purple = Color(0xFF8B5CF6)
-private val Cyan = Color(0xFF38BDF8)
-private val Muted = Color(0xFF9AA8C7)
+private val Ink = Color(0xFF07130E)
+private val SurfaceGreen = Color(0xFF10251B)
+private val SoftGreen = Color(0xFF183B2A)
+private val Mint = Color(0xFFB8F7CF)
+private val Green = Color(0xFF42D778)
+private val Lime = Color(0xFFB7F34A)
+private val Muted = Color(0xFF9BB5A5)
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { LRewardsApp() }
-    }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { LRewardsApp() } }
 }
 
 @Composable
 private fun LRewardsApp(auth: AuthViewModel = viewModel()) {
     val state by auth.state.collectAsState()
-    MaterialTheme { if (state.signedIn) HomeScreen(state.email, auth::signOut) else AuthForm(state, auth) }
+    MaterialTheme { if (state.signedIn) RewardsHome(state.email, auth::signOut) else AuthForm(state, auth) }
 }
 
 @Composable
@@ -74,88 +87,70 @@ private fun AuthForm(state: AuthState, auth: AuthViewModel) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF25134B)))).padding(28.dp)) {
-        Column(Modifier.align(Alignment.Center), verticalArrangement = Arrangement.Center) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Ink, Color(0xFF123F2A)))).padding(24.dp)) {
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            BrandMark()
             Text("L REWARDS", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
-            Text("Small actions. Real rewards.", color = Muted, modifier = Modifier.padding(top = 6.dp))
+            Text("Earn more from every moment", color = Mint, modifier = Modifier.padding(top = 6.dp))
             Spacer(Modifier.height(28.dp))
             if (signUp) OutlinedTextField(name, { name = it }, label = { Text("Display name") }, modifier = Modifier.fillMaxWidth())
             if (signUp) Spacer(Modifier.height(10.dp))
             OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(password, { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-            state.error?.let { Text(it, color = Color(0xFFFCA5A5), modifier = Modifier.padding(top = 12.dp)) }
+            state.error?.let { Text(it, color = Color(0xFFFFB4AB), modifier = Modifier.padding(top = 12.dp)) }
             Spacer(Modifier.height(18.dp))
-            Button(enabled = !state.loading && email.isNotBlank() && password.length >= 6, onClick = { if (signUp) auth.signUp(email.trim(), password, name.ifBlank { "Rewarder" }) else auth.signIn(email.trim(), password) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Purple)) {
-                if (state.loading) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White) else Text(if (signUp) "Create account" else "Sign in")
+            Button(enabled = !state.loading && email.isNotBlank() && password.length >= 6, onClick = { if (signUp) auth.signUp(email.trim(), password, name.ifBlank { "Rewarder" }) else auth.signIn(email.trim(), password) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) {
+                if (state.loading) CircularProgressIndicator(Modifier.size(20.dp), color = Ink) else Text(if (signUp) "Create account" else "Sign in", fontWeight = FontWeight.Bold)
             }
-            TextButton(onClick = { signUp = !signUp }, modifier = Modifier.fillMaxWidth()) { Text(if (signUp) "Already have an account? Sign in" else "New here? Create an account", color = Color(0xFFC4B5FD)) }
+            TextButton(onClick = { signUp = !signUp }, modifier = Modifier.fillMaxWidth()) { Text(if (signUp) "Already have an account? Sign in" else "New here? Create an account", color = Mint) }
         }
     }
 }
 
-private data class Game(val title: String, val subtitle: String, val reward: String, val accent: Color, val limit: String)
+@Composable private fun BrandMark() { Box(Modifier.size(62.dp).background(Brush.linearGradient(listOf(Lime, Green)), CircleShape), contentAlignment = Alignment.Center) { Text("L", color = Ink, fontSize = 36.sp, fontWeight = FontWeight.Black) } }
+
+private data class Game(val title: String, val subtitle: String, val reward: String, val limit: String, val icon: ImageVector, val color: Color)
 
 @Composable
-private fun HomeScreen(email: String, signOut: () -> Unit) {
+private fun RewardsHome(email: String, signOut: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     var coins by remember { mutableIntStateOf(0) }
-    var message by remember { mutableStateOf<String?>(null) }
+    var selected by remember { mutableStateOf<Game?>(null) }
     val games = listOf(
-        Game("Spin Wheel", "Lucky spin", "+1–10", Color(0xFFF59E0B), "0/5 today"),
-        Game("Scratch Card", "Reveal a prize", "0–5", Color(0xFFEC4899), "0/3 today"),
-        Game("Captcha", "Quick challenge", "+2", Color(0xFF22C55E), "0/3 today"),
-        Game("Math Quiz", "5 questions", "+5", Cyan, "0/2 today")
+        Game("Spin Wheel", "Try your luck", "1–10 coins", "5 plays", Icons.Rounded.Casino, Lime),
+        Game("Scratch Card", "Reveal a prize", "0–5 coins", "3 plays", Icons.Rounded.Scratchpad, Color(0xFFFFB95C)),
+        Game("Captcha", "Quick challenge", "2 coins", "3 plays", Icons.Rounded.CheckCircle, Green),
+        Game("Math Quiz", "Five questions", "5 coins", "2 plays", Icons.Rounded.QuestionMark, Color(0xFF71C7FF))
     )
-    Surface(Modifier.fillMaxSize(), color = Navy) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 18.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column { Text("Good to see you", color = Muted, fontSize = 13.sp); Text(email.substringBefore("@"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
-                Box(Modifier.size(42.dp).background(Purple, CircleShape), contentAlignment = Alignment.Center) { Text("LR", color = Color.White, fontWeight = FontWeight.Bold) }
-            }
-            Spacer(Modifier.height(20.dp))
+    Surface(Modifier.fillMaxSize(), color = Ink) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp)) {
+            Header(email)
+            Spacer(Modifier.height(18.dp))
             BalanceCard(coins)
             Spacer(Modifier.height(22.dp))
-            when (tab) {
-                0 -> EarnHome(games) { game -> coins += game.reward.filter { it.isDigit() }.toIntOrNull() ?: 1; message = "You earned ${game.reward} coins" }
-                1 -> EarnHome(games) { game -> coins += 1; message = "Challenge started: ${game.title}" }
-                2 -> Wallet(coins)
-                else -> Profile(email, signOut)
-            }
+            when (tab) { 0, 1 -> EarnPage(games) { selected = it }; 2 -> WalletPage(coins); else -> ProfilePage(email, signOut) }
             Spacer(Modifier.weight(1f))
-            Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(22.dp)).padding(8.dp), horizontalArrangement = Arrangement.SpaceAround) {
-                listOf("Home", "Earn", "Wallet", "Profile").forEachIndexed { index, label -> Text(label, color = if (tab == index) Color.White else Muted, fontWeight = if (tab == index) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.clickable { tab = index }.padding(12.dp)) }
-            }
+            BottomBar(tab) { tab = it }
         }
-        message?.let { text -> Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) { Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF202C50)), shape = RoundedCornerShape(22.dp)) { Column(Modifier.padding(26.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(text, color = Color.White, fontSize = 18.sp); Spacer(Modifier.height(14.dp)); Button(onClick = { message = null }, colors = ButtonDefaults.buttonColors(containerColor = Purple)) { Text("Continue") } } } } }
+        selected?.let { game -> GameDialog(game, onDismiss = { selected = null }) { reward -> coins += reward; selected = null } }
     }
 }
 
-@Composable
-private fun BalanceCard(coins: Int) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.Transparent), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp)) {
-        Box(Modifier.background(Brush.linearGradient(listOf(Color(0xFF5633A4), Color(0xFF1F6CA5)))).padding(22.dp)) {
-            Column { Text("TOTAL BALANCE", color = Color(0xFFD8D5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(6.dp)); Text("$coins coins", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black); Spacer(Modifier.height(8.dp)); Text("Keep earning to unlock rewards", color = Color(0xFFE0E7FF), fontSize = 13.sp) }
-        }
-    }
-}
+@Composable private fun Header(email: String) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Column { Text("WELCOME BACK", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text(email.substringBefore("@"), color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); Text("Ready to earn today?", color = Muted, fontSize = 13.sp) }; Box(Modifier.size(44.dp).background(SoftGreen, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.AutoAwesome, null, tint = Lime) } } }
 
-@Composable
-private fun EarnHome(games: List<Game>, onGame: (Game) -> Unit) {
-    Column { Text("Earn coins", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold); Text("Choose a challenge and start earning", color = Muted, modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)); LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(330.dp)) { items(games) { game -> GameCard(game) { onGame(game) } } } }
-}
+@Composable private fun BalanceCard(coins: Int) { Card(colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth()) { Box(Modifier.background(Brush.linearGradient(listOf(Color(0xFF2D963F), Color(0xFF0E4C31)))).padding(22.dp)) { Column { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text("TOTAL BALANCE", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold); Text("+12% this week", color = Lime, fontSize = 11.sp) }; Spacer(Modifier.height(5.dp)); Text("$coins", color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Black); Text("coins available", color = Mint, fontSize = 13.sp); Spacer(Modifier.height(16.dp)); Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.height(6.dp).weight(1f).clip(CircleShape).background(Color.White.copy(.18f))) { Box(Modifier.fillMaxWidth(.36f).height(6.dp).background(Lime, CircleShape)) }; Spacer(Modifier.width(10.dp)); Text("36% to next reward", color = Color.White, fontSize = 11.sp) } } } } }
 
-@Composable
-private fun GameCard(game: Game, onClick: () -> Unit) {
-    Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(22.dp), modifier = Modifier.border(1.dp, game.accent.copy(alpha = .3f), RoundedCornerShape(22.dp))) {
-        Column(Modifier.padding(16.dp)) { Box(Modifier.size(42.dp).background(game.accent.copy(alpha = .18f), CircleShape), contentAlignment = Alignment.Center) { Text(game.title.take(1), color = game.accent, fontWeight = FontWeight.Black, fontSize = 20.sp) }; Spacer(Modifier.height(12.dp)); Text(game.title, color = Color.White, fontWeight = FontWeight.Bold); Text(game.subtitle, color = Muted, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(game.reward, color = game.accent, fontWeight = FontWeight.Bold); Text(game.limit, color = Muted, fontSize = 11.sp) } }
-    }
-}
+@Composable private fun EarnPage(games: List<Game>, onGame: (Game) -> Unit) { Column { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Bottom) { Column { Text("Earn coins", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Pick a challenge and keep your streak", color = Muted, fontSize = 13.sp) }; Text("TODAY", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Bold) }; Spacer(Modifier.height(16.dp)); LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.height(340.dp)) { items(games) { game -> GameCard(game) { onGame(game) } } }; Spacer(Modifier.height(18.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) { Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.SportsEsports, null, tint = Lime, modifier = Modifier.size(28.dp)); Spacer(Modifier.width(12.dp)); Column { Text("Daily streak", color = Color.White, fontWeight = FontWeight.Bold); Text("Play one game today to keep it alive", color = Muted, fontSize = 12.sp) } } } } }
 
-@Composable
-private fun Wallet(coins: Int) { Column { Text("Wallet", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(14.dp)); Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("Available coins", color = Muted); Text("$coins", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black); Spacer(Modifier.height(12.dp)); Text("Keep playing to reach the redemption minimum.", color = Muted) } } } }
+@Composable private fun GameCard(game: Game, onClick: () -> Unit) { Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.border(1.dp, game.color.copy(.22f), RoundedCornerShape(22.dp))) { Column(Modifier.padding(15.dp)) { Box(Modifier.size(44.dp).background(game.color.copy(.15f), CircleShape), Alignment.Center) { Icon(game.icon, null, tint = game.color) }; Spacer(Modifier.height(12.dp)); Text(game.title, color = Color.White, fontWeight = FontWeight.Bold); Text(game.subtitle, color = Muted, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text(game.reward, color = game.color, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text(game.limit, color = Muted, fontSize = 11.sp) } } } }
 
-@Composable
-private fun Profile(email: String, signOut: () -> Unit) { Column { Text("Profile", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(14.dp)); Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("Account", color = Muted); Text(email, color = Color.White, modifier = Modifier.padding(top = 6.dp)); Spacer(Modifier.height(18.dp)); Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF33415F))) { Text("Sign out") } } } } }
+@Composable private fun GameDialog(game: Game, onDismiss: () -> Unit, onReward: (Int) -> Unit) { var answer by remember { mutableStateOf("") }; AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text(game.title, color = Color.White, fontWeight = FontWeight.Black) }, text = { Column { Text("Complete this challenge to earn coins.", color = Muted); Spacer(Modifier.height(14.dp)); Text(if (game.title == "Captcha") "What is 5 + 3?" else "Your reward is ready to claim.", color = Mint, fontSize = 18.sp, fontWeight = FontWeight.Bold); if (game.title == "Captcha") { Spacer(Modifier.height(10.dp)); OutlinedTextField(answer, { answer = it }, label = { Text("Answer") }) } } }, confirmButton = { Button(onClick = { if (game.title != "Captcha" || answer == "8") onReward(if (game.title == "Spin Wheel") 7 else if (game.title == "Scratch Card") 3 else if (game.title == "Math Quiz") 5 else 2) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Claim reward") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Later", color = Mint) } }) }
+
+@Composable private fun WalletPage(coins: Int) { Column { Text("Wallet", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Your reward balance", color = Muted); Spacer(Modifier.height(16.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("AVAILABLE", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text("$coins coins", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black); Spacer(Modifier.height(12.dp)); Text("Redemptions will appear here", color = Muted) } } } }
+
+@Composable private fun ProfilePage(email: String, signOut: () -> Unit) { Column { Text("Profile", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Manage your L Rewards account", color = Muted); Spacer(Modifier.height(16.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("ACCOUNT", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text(email, color = Color.White, modifier = Modifier.padding(top = 8.dp)); Spacer(Modifier.height(18.dp)); Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = SoftGreen)) { Text("Sign out", color = Color.White) } } } } }
+
+@Composable private fun BottomBar(selected: Int, onSelect: (Int) -> Unit) { Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(6.dp), Arrangement.SpaceAround) { listOf(Icons.Rounded.Home, Icons.Rounded.AutoAwesome, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.Person).forEachIndexed { index, icon -> Box(Modifier.size(52.dp).clip(RoundedCornerShape(18.dp)).clickable { onSelect(index) }.background(if (selected == index) Green.copy(.2f) else Color.Transparent), Alignment.Center) { Icon(icon, null, tint = if (selected == index) Lime else Muted) } } } } }
 
 private fun String.take(n: Int): String = if (length <= n) this else substring(0, n)
