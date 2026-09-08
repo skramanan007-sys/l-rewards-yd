@@ -150,7 +150,28 @@ private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel)
 
 @Composable private fun GameCard(game: Game, onClick: () -> Unit) { Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.border(1.dp, game.color.copy(.22f), RoundedCornerShape(22.dp))) { Column(Modifier.padding(15.dp)) { Box(Modifier.size(44.dp).background(game.color.copy(.15f), CircleShape), Alignment.Center) { Icon(game.icon, null, tint = game.color) }; Spacer(Modifier.height(12.dp)); Text(game.title, color = Color.White, fontWeight = FontWeight.Bold); Text(game.subtitle, color = Muted, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text(game.reward, color = game.color, fontWeight = FontWeight.Bold, fontSize = 12.sp); Text(game.limit, color = Muted, fontSize = 11.sp) } } } }
 
-@Composable private fun GameDialog(game: Game, onDismiss: () -> Unit, onReward: (Int) -> Unit) { var answer by remember { mutableStateOf("") }; AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text(game.title, color = Color.White, fontWeight = FontWeight.Black) }, text = { Column { Text("Complete this challenge to earn coins.", color = Muted); Spacer(Modifier.height(14.dp)); Text(if (game.title == "Captcha") "What is 5 + 3?" else "Your reward is ready to claim.", color = Mint, fontSize = 18.sp, fontWeight = FontWeight.Bold); if (game.title == "Captcha") { Spacer(Modifier.height(10.dp)); OutlinedTextField(answer, { answer = it }, label = { Text("Answer") }) } } }, confirmButton = { Button(onClick = { if (game.title != "Captcha" || answer == "8") onReward(if (game.title == "Spin Wheel") 7 else if (game.title == "Scratch Card") 3 else if (game.title == "Math Quiz") 5 else 2) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Claim reward") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Later", color = Mint) } }) }
+@Composable
+private fun GameDialog(game: Game, onDismiss: () -> Unit, onReward: (Int) -> Unit) {
+    var answer by remember { mutableStateOf("") }
+    var scratchIndex by remember { mutableIntStateOf(-1) }
+    var quizStep by remember { mutableIntStateOf(0) }
+    val quizQuestions = listOf("5 + 3 = ?", "10 - 4 = ?", "2 × 3 = ?", "12 ÷ 4 = ?", "7 + 2 = ?")
+    val quizOptions = listOf(listOf("6", "8", "9"), listOf("4", "5", "6"), listOf("5", "6", "8"), listOf("2", "3", "4"), listOf("7", "8", "9"))
+    val quizAnswers = listOf("8", "6", "6", "3", "9")
+    val scratchRewards = listOf(0, 1, 2, 3, 4, 5, 1, 2, 3)
+    AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text(game.title, color = Color.White, fontWeight = FontWeight.Black) }, text = {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Complete the challenge to claim your server-validated reward.", color = Muted)
+            Spacer(Modifier.height(16.dp))
+            when (game.title) {
+                "Spin Wheel" -> { Box(Modifier.size(170.dp).background(Brush.sweepGradient(listOf(Lime, Green, Color(0xFFFFC857), Green)), CircleShape), contentAlignment = Alignment.Center) { Box(Modifier.size(116.dp).background(SurfaceGreen, CircleShape), contentAlignment = Alignment.Center) { Text("SPIN", color = Lime, fontWeight = FontWeight.Black, fontSize = 20.sp) } }; Spacer(Modifier.height(12.dp)); Text("Tap claim to spin for 1–10 coins", color = Mint) }
+                "Scratch Card" -> { Text("Scratch a card", color = Mint, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp)); LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.height(180.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(9) { index -> Card(onClick = { if (scratchIndex < 0) scratchIndex = index }, colors = CardDefaults.cardColors(containerColor = if (scratchIndex == index) Green.copy(.28f) else SoftGreen), shape = RoundedCornerShape(14.dp)) { Box(Modifier.height(52.dp), contentAlignment = Alignment.Center) { Text(if (scratchIndex == index) "+${scratchRewards[index]}" else "?", color = if (scratchIndex == index) Lime else Color.White, fontWeight = FontWeight.Black) } } } } }
+                "Captcha" -> { Text("What is 5 + 3?", color = Mint, fontSize = 20.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(10.dp)); OutlinedTextField(answer, { answer = it }, label = { Text("Answer") }) }
+                else -> { Text("Question ${quizStep + 1} of 5", color = Muted, fontSize = 12.sp); Text(quizQuestions[quizStep], color = Mint, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp)); Spacer(Modifier.height(12.dp)); quizOptions[quizStep].forEach { option -> Button(onClick = { if (quizStep < 4) quizStep++ }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), colors = ButtonDefaults.buttonColors(containerColor = SoftGreen, contentColor = Color.White)) { Text(option) } } }
+            }
+        }
+    }, confirmButton = { Button(onClick = { val reward = when (game.title) { "Spin Wheel" -> (1..10).random(); "Scratch Card" -> if (scratchIndex >= 0) scratchRewards[scratchIndex] else 0; "Captcha" -> 2; else -> 5 }; if (game.title != "Captcha" || answer == "8") onReward(reward) }, enabled = game.title != "Scratch Card" || scratchIndex >= 0, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Claim reward") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Later", color = Mint) } })
+}
 
 @Composable
 private fun WalletPage(coins: Int, onRedeem: () -> Unit) {
