@@ -190,7 +190,7 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
                 2 -> WalletPage(coins, wallet.transactions, wallet.withdrawals)
                 3 -> RedeemPage(coins, wallet.rewards) { rewardId, cost, destination ->
                     auth.requestRedemption(rewardId, cost, destination) { balance, error ->
-                        message = error ?: "${type.replaceFirstChar { it.uppercase() }} redemption requested"
+                        message = error ?: "${rewardId.replaceFirstChar { it.uppercase() }} redemption requested"
                         auth.loadWallet()
                     }
                 }
@@ -392,7 +392,6 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
             }
         }
     }
-}
 
 @Composable
 private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json.JsonObject>, withdrawals: List<kotlinx.serialization.json.JsonObject>) {
