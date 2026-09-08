@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -256,7 +258,21 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                 Spacer(Modifier.height(12.dp))
                 when (game.name) {
                     "Spin Wheel" -> {
-                        Text("Spin for 1–10 coins", color = Mint)
+                        Text("Spin the wheel and land on a real prize", color = Mint)
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(260.dp)) {
+                            Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { rotationZ = rotation.value }) {
+                                val slice = 36f
+                                val wheelColors = listOf(Lime, Green, Color(0xFF25A7A0), Color(0xFF4BA3FF), Color(0xFF8D6BFF), Color(0xFFFFB95C), Color(0xFFFF6B81), Color(0xFF42D778), Color(0xFF71C7FF), Color(0xFFD9F99D))
+                                wheelColors.forEachIndexed { index, color ->
+                                    drawArc(color, index * slice - 90f, slice, true)
+                                }
+                                drawCircle(Panel, radius = 38f, center = center)
+                                drawCircle(Lime, radius = 7f, center = center)
+                            }
+                            Text("COINS", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            Box(Modifier.align(Alignment.TopCenter).size(0.dp))
+                        }
+                        Text("1  ·  2  ·  3  ·  4  ·  5  ·  6  ·  7  ·  8  ·  9  ·  10", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Button(enabled = !spinning, onClick = {
                             spinning = true
                             scope.launch {
