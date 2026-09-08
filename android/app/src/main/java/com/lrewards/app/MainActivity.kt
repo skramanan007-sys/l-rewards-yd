@@ -136,7 +136,59 @@ private fun String.toType() = when (this) { "Spin Wheel" -> "spin"; "Scratch Car
     } }, confirmButton = { TextButton(onClick = onDismiss) { Text("Close", color = Mint) } })
 }
 
-@Composable private fun WalletPage(coins: Int, onWithdraw: () -> Unit) { Column { Text("Wallet", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); Text("Your earnings and reward history", color = Muted); Spacer(Modifier.height(18.dp)); Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Text("AVAILABLE", color = Mint, fontSize = 11.sp); Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black); Button(onClick = onWithdraw, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("WITHDRAW") } } }; Spacer(Modifier.height(18.dp)); Text("REWARD HISTORY", color = Mint, fontWeight = FontWeight.Bold); Text("Your completed games will appear here", color = Muted, modifier = Modifier.padding(top = 8.dp)) } }
-@Composable private fun ProfilePage(email: String, signOut: () -> Unit) { Column { Text("Profile", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); Text(email, color = Mint, modifier = Modifier.padding(top = 10.dp)); Spacer(Modifier.height(22.dp)); Text("Account settings", color = Muted); Spacer(Modifier.height(12.dp)); Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("SIGN OUT") } } }
+@Composable
+private fun WalletPage(coins: Int, onWithdraw: () -> Unit) {
+    var showOptions by remember { mutableStateOf(false) }
+    Column {
+        Text("Wallet", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+        Text("Your earnings and reward history", color = Muted)
+        Spacer(Modifier.height(18.dp))
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(18.dp)) {
+                Text("AVAILABLE BALANCE", color = Mint, fontSize = 11.sp)
+                Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                Text("100 coins = ₹1", color = Muted, fontSize = 12.sp)
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { showOptions = true }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("WITHDRAW REWARDS") }
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        Text("REWARD HISTORY", color = Mint, fontWeight = FontWeight.Bold)
+        HistoryRow("Spin Wheel", "+7 coins", "Completed today", Lime)
+        HistoryRow("Scratch Card", "+3 coins", "Completed today", Color(0xFFFFB95C))
+        Spacer(Modifier.height(14.dp))
+        Text("WITHDRAWAL HISTORY", color = Mint, fontWeight = FontWeight.Bold)
+        Text("No withdrawal requests yet", color = Muted, modifier = Modifier.padding(top = 8.dp))
+        if (showOptions) AlertDialog(
+            onDismissRequest = { showOptions = false },
+            containerColor = Panel,
+            title = { Text("Choose withdrawal method", color = Color.White, fontWeight = FontWeight.Black) },
+            text = { Column { Text("Minimum withdrawal: 100 coins", color = Muted); Spacer(Modifier.height(8.dp)); listOf("UPI", "Amazon Pay", "Google Play").forEach { method -> Button(onClick = { showOptions = false; onWithdraw() }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = ButtonDefaults.buttonColors(containerColor = Panel2, contentColor = Mint)) { Text(method) } } } },
+            confirmButton = { TextButton(onClick = { showOptions = false }) { Text("Cancel", color = Mint) } },
+        )
+    }
+}
+
+@Composable private fun HistoryRow(title: String, amount: String, detail: String, accent: Color) {
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(34.dp).background(accent.copy(alpha = .18f), CircleShape), contentAlignment = Alignment.Center) { Text("+", color = accent, fontWeight = FontWeight.Black) }
+        Spacer(Modifier.width(10.dp)); Column(Modifier.weight(1f)) { Text(title, color = Color.White, fontWeight = FontWeight.Bold); Text(detail, color = Muted, fontSize = 12.sp) }; Text(amount, color = accent, fontWeight = FontWeight.Black)
+    }
+}
+@Composable private fun ProfilePage(email: String, signOut: () -> Unit) {
+    Column {
+        Text("Profile", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+        Text("Your L Rewards account", color = Muted)
+        Spacer(Modifier.height(18.dp))
+        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) { Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(58.dp).background(Brush.linearGradient(listOf(Lime, Green)), CircleShape), contentAlignment = Alignment.Center) { Text(email.take(1).uppercase(), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black) }; Spacer(Modifier.width(14.dp)); Column { Text(email.substringBefore("@"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp); Text(email, color = Mint, fontSize = 12.sp); Text("Verified reward member", color = Muted, fontSize = 12.sp) } } }
+        Spacer(Modifier.height(18.dp)); Text("PROFILE & SETTINGS", color = Mint, fontWeight = FontWeight.Bold)
+        SettingRow("Referral program", "Invite friends and earn bonus coins")
+        SettingRow("Notifications", "Reward and withdrawal updates")
+        SettingRow("Help center", "Get support for your account")
+        Spacer(Modifier.height(16.dp)); Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("SIGN OUT") }
+    }
+}
+
+@Composable private fun SettingRow(title: String, detail: String) { Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(8.dp).background(Lime, CircleShape)); Spacer(Modifier.width(12.dp)); Column { Text(title, color = Color.White, fontWeight = FontWeight.Bold); Text(detail, color = Muted, fontSize = 12.sp) } } }
 @Composable private fun BottomBar(selected: Int, onSelected: (Int) -> Unit) { Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(8.dp), horizontalArrangement = Arrangement.SpaceAround) { listOf(Icons.Rounded.Home, Icons.Rounded.SportsEsports, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.Person).forEachIndexed { i, icon -> Icon(icon, null, tint = if (selected == i) Lime else Muted, modifier = Modifier.size(30.dp).clickable { onSelected(i) }.padding(5.dp)) } } }
 
