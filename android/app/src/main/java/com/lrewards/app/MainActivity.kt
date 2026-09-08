@@ -39,6 +39,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -80,6 +81,17 @@ private fun LRewardsApp(auth: AuthViewModel = viewModel()) {
 }
 
 @Composable
+private fun authFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = Color(0xFF143522),
+    unfocusedTextColor = Color(0xFF143522),
+    focusedBorderColor = Green,
+    unfocusedBorderColor = Color(0xFF4D8561),
+    focusedLabelColor = Color(0xFF1B4D32),
+    unfocusedLabelColor = Color(0xFF275B3A),
+    cursorColor = Color(0xFF1B4D32),
+)
+
+@Composable
 private fun AuthForm(state: AuthState, auth: AuthViewModel) {
     var signUp by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
@@ -92,9 +104,9 @@ private fun AuthForm(state: AuthState, auth: AuthViewModel) {
             Text("Earn more from every moment", color = Mint)
             Spacer(Modifier.height(24.dp))
             if (signUp) { OutlinedTextField(name, { name = it }, label = { Text("Display name") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp)) }
-            OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(email, { email = it }, label = { Text("Email", color = Color(0xFF1B4D32)) }, modifier = Modifier.fillMaxWidth(), colors = authFieldColors())
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(password, { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(password, { password = it }, label = { Text("Password", color = Color(0xFF1B4D32)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), colors = authFieldColors())
             state.error?.let { Text(it, color = Color(0xFFFFB4AB), modifier = Modifier.padding(8.dp)) }
             Spacer(Modifier.height(12.dp))
             Button(enabled = !state.loading && email.isNotBlank() && password.length >= 6, onClick = { if (signUp) auth.signUp(email.trim(), password, name.ifBlank { "Rewarder" }) else auth.signIn(email.trim(), password) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { if (state.loading) CircularProgressIndicator(Modifier.size(20.dp), color = Ink) else Text(if (signUp) "Create account" else "Sign in") }
