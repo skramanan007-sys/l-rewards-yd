@@ -110,13 +110,36 @@ private data class Game(val name: String, val subtitle: String, val reward: Stri
 
 @Composable
 private fun RewardsHome(email: String, auth: AuthViewModel) {
-    var tab by remember { mutableIntStateOf(0) }; var coins by remember { mutableIntStateOf(0) }; var game by remember { mutableStateOf<Game?>(null) }; var message by remember { mutableStateOf<String?>(null) }
+    var tab by remember { mutableIntStateOf(0) }
+    var coins by remember { mutableIntStateOf(0) }
+    var game by remember { mutableStateOf<Game?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
     val games = remember { listOf(Game("Spin Wheel", "Spin for a surprise", "1–10 coins", "5 today", Icons.Rounded.Casino, Lime), Game("Scratch Card", "Reveal your prize", "0–5 coins", "3 today", Icons.Rounded.AutoAwesome, Color(0xFFFFB95C)), Game("Captcha", "Type the code", "2 coins", "3 today", Icons.Rounded.CheckCircle, Green), Game("Math Quiz", "5 correct answers", "5 coins", "2 today", Icons.Rounded.QuestionMark, Color(0xFF71C7FF))) }
-    Surface(Modifier.fillMaxSize(), color = Ink) { Column(Modifier.fillMaxSize().padding(18.dp)) {
+    Surface(Modifier.fillMaxSize(), color = Ink) {
+        Column(Modifier.fillMaxSize().padding(18.dp)) {
         Text("WELCOME BACK", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text(email.substringBefore("@"), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black); Text("Your next reward is waiting", color = Muted); Spacer(Modifier.height(16.dp))
         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(26.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text("TOTAL BALANCE", color = Mint, fontSize = 12.sp); Text("TODAY  •  0/4", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold) }; Text("$coins", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black); Text("coins available", color = Mint) } }
         Spacer(Modifier.height(18.dp)); when (tab) { 0, 1 -> EarnPage(games) { game = it }; 2 -> WalletPage(coins) { message = "Withdrawal options coming next" }; else -> ProfilePage(email, auth::signOut) }; Spacer(Modifier.weight(1f)); BottomBar(tab) { tab = it }
-    }; game?.let { selected -> GameExperience(selected, { game = null }) { amount -> auth.playGame(selected.name.toType(), amount) { balance, error -> if (balance != null) coins = balance; message = error ?: "+$amount coins added"; game = null } } }; message?.let { text -> AlertDialog(onDismissRequest = { message = null }, confirmButton = { TextButton({ message = null }) { Text("OK", color = Green) } }, title = { Text("L Rewards", color = Color.White) }, text = { Text(text, color = Mint) }, containerColor = Panel) } }
+        }
+        game?.let { selected ->
+            GameExperience(selected, { game = null }) { amount ->
+                auth.playGame(selected.name.toType(), amount) { balance, error ->
+                    if (balance != null) coins = balance
+                    message = error ?: "+$amount coins added"
+                    game = null
+                }
+            }
+        }
+        message?.let { text ->
+            AlertDialog(
+                onDismissRequest = { message = null },
+                confirmButton = { TextButton(onClick = { message = null }) { Text("OK", color = Green) } },
+                title = { Text("L Rewards", color = Color.White) },
+                text = { Text(text, color = Mint) },
+                containerColor = Panel,
+            )
+        }
+    }
 }
 
 private fun String.toType() = when (this) { "Spin Wheel" -> "spin"; "Scratch Card" -> "scratch"; "Captcha" -> "captcha"; else -> "quiz" }
@@ -129,9 +152,9 @@ private fun String.toType() = when (this) { "Spin Wheel" -> "spin"; "Scratch Car
     AlertDialog(onDismissRequest = onDismiss, containerColor = Panel, title = { Text(game.name, color = Color.White, fontWeight = FontWeight.Black) }, text = { Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(game.subtitle, color = Muted); Spacer(Modifier.height(12.dp)); when (game.name) {
             "Spin Wheel" -> { Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) { Canvas(Modifier.fillMaxSize().rotate(rotation.value)) { val colors = listOf(Lime, Green, Color(0xFF65BFFF), Color(0xFFFFB95C), Color(0xFFEF709D), Green); colors.forEachIndexed { i, c -> drawArc(c, i * 60f, 58f, true) }; drawCircle(Ink, radius = 28f); drawLine(Color.White, center, center.copy(y = 24f), 8f, StrokeCap.Round) } }; Text("Tap SPIN to rotate the wheel", color = Mint); Button(enabled = !spin, onClick = { spin = true; scope.launch { rotation.animateTo(rotation.value + 1440f + Random.nextInt(0, 360), tween(2200)); spin = false } }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (spin) "SPINNING…" else "SPIN") } }
-            "Scratch Card" -> { Text("Scratch a tile to reveal coins", color = Mint); Spacer(Modifier.height(8.dp)); androidx.compose.foundation.lazy.grid.LazyVerticalGrid(columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3), modifier = Modifier.height(180.dp)) { gridItems(9) { i -> Card(onClick = { scratch = i }, colors = CardDefaults.cardColors(containerColor = if (scratch == i) Green else Panel2)) { Box(Modifier.height(54.dp), contentAlignment = Alignment.Center) { Text(if (scratch == i) "${i % 6}" else "SCRATCH", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) } } } } }
+            "Scratch Card" -> { Text("Scratch a tile to reveal coins", color = Mint); Spacer(Modifier.height(8.dp)); androidx.compose.foundation.lazy.grid.LazyVerticalGrid(columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3), modifier = Modifier.height(180.dp)) { gridItems(count = 9) { i -> Card(onClick = { scratch = i }, colors = CardDefaults.cardColors(containerColor = if (scratch == i) Green else Panel2)) { Box(Modifier.height(54.dp), contentAlignment = Alignment.Center) { Text(if (scratch == i) "${i % 6}" else "SCRATCH", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) } } } } }
             "Captcha" -> { Text(captcha, color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black); OutlinedTextField(code, { code = it }, label = { Text("Type the code") }, singleLine = true); Button(onClick = { if (code.equals(captcha, true)) onReward(2) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("VERIFY") } }
-            else -> { Text("Question ${question + 1} of 5", color = Mint, fontWeight = FontWeight.Bold); Text(quiz[question].first, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black); quiz[question].second.forEach { option -> Button(onClick = { if (option == answer[question]) quizScore++; if (question == 4) onReward(if (quizScore + if (option == answer[question]) 1 else 0 == 5) 5 else 0) else question++ }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Panel2)) { Text(option, color = Color.White) } } }
+            else -> { Text("Question ${question + 1} of 5", color = Mint, fontWeight = FontWeight.Bold); Text(quiz[question].first, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black); quiz[question].second.forEach { option -> Button(onClick = { if (option == answer[question]) quizScore++; if (question == 4) onReward(if (quizScore + (if (option == answer[question]) 1 else 0) == 5) 5 else 0) else question++ }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Panel2)) { Text(option, color = Color.White) } } }
         }; if (game.name == "Spin Wheel" && !spin) TextButton({ onReward(Random.nextInt(1, 11)) }) { Text("Claim the landed prize", color = Lime) }; if (game.name == "Scratch Card" && scratch >= 0) Button(onClick = { onReward(scratch % 6) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("COLLECT ${scratch % 6} COINS") }
     } }, confirmButton = { TextButton(onClick = onDismiss) { Text("Close", color = Mint) } })
 }
@@ -149,7 +172,7 @@ private fun WalletPage(coins: Int, onWithdraw: () -> Unit) {
                 Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
                 Text("100 coins = ₹1", color = Muted, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = { showOptions = true }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("WITHDRAW REWARDS") }
+                Button(onClick = { onWithdraw(); showOptions = true }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("WITHDRAW REWARDS") }
             }
         }
         Spacer(Modifier.height(18.dp))
