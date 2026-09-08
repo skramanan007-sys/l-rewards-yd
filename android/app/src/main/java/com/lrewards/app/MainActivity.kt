@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -287,9 +288,9 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                                     drawIntoCanvas { canvas ->
                                         canvas.nativeCanvas.drawText(
                                             "${index + 1}",
-                                            labelCenter.x - 8f,
+                                            labelCenter.x,
                                             labelCenter.y + 7f,
-                                            Paint().apply { color = android.graphics.Color.WHITE; textSize = 22f; textAlign = Paint.Align.CENTER; isFakeBoldText = true },
+                                            android.graphics.Paint().also { paint -> paint.color = android.graphics.Color.WHITE; paint.textSize = 22f; paint.textAlign = android.graphics.Paint.Align.CENTER; paint.isFakeBoldText = true },
                                         )
                                     }
                                 }
