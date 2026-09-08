@@ -152,6 +152,7 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
     var coins by remember { mutableIntStateOf(0) }
     var selectedGame by remember { mutableStateOf<Game?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    val wallet by auth.wallet.collectAsState()
     val games = remember {
         listOf(
             Game("Spin Wheel", "Spin for a surprise", "1–10 coins", "5 today", Icons.Rounded.Casino, Lime),
@@ -179,7 +180,7 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
             Spacer(Modifier.height(18.dp))
             when (tab) {
                 0, 1 -> EarnPage(games) { selectedGame = it }
-                2 -> WalletPage(coins) { type ->
+                2 -> WalletPage(coins, wallet.transactions, wallet.withdrawals) { type ->
                     auth.requestRedemption(type, 100) { balance, error ->
                         if (balance != null) coins = balance
                         message = error ?: "${type.replaceFirstChar { it.uppercase() }} withdrawal request submitted"
@@ -371,7 +372,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
 }
 
 @Composable
-private fun WalletPage(coins: Int, onWithdraw: (String) -> Unit) {
+private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json.JsonObject>, withdrawals: List<kotlinx.serialization.json.JsonObject>, onWithdraw: (String) -> Unit) {
     var withdrawalOpen by remember { mutableStateOf(false) }
     var selectedMethod by remember { mutableStateOf("upi") }
     Column {
@@ -389,11 +390,10 @@ private fun WalletPage(coins: Int, onWithdraw: (String) -> Unit) {
         }
         Spacer(Modifier.height(18.dp))
         Text("REWARD HISTORY", color = Mint, fontWeight = FontWeight.Bold)
-        HistoryRow("Spin Wheel", "+7 coins", "Completed today", Lime)
-        HistoryRow("Scratch Card", "+3 coins", "Completed today", Color(0xFFFFB95C))
+        if (transactions.isEmpty()) Text("No earning transactions yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else transactions.take(5).forEach { transaction -> HistoryRow(transaction["type"]?.toString()?.trim('"') ?: "Reward", "+${transaction["amount"] ?: 0} coins", transaction["created_at"]?.toString()?.trim('"') ?: "", Lime) }
         Spacer(Modifier.height(14.dp))
         Text("WITHDRAWAL HISTORY", color = Mint, fontWeight = FontWeight.Bold)
-        Text("No withdrawal requests yet", color = Muted, modifier = Modifier.padding(top = 8.dp))
+        if (withdrawals.isEmpty()) Text("No withdrawal requests yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else withdrawals.take(5).forEach { withdrawal -> HistoryRow(withdrawal["reward_type"]?.toString()?.trim('"') ?: "Withdrawal", "-${withdrawal["amount"] ?: 0} coins", withdrawal["status"]?.toString()?.trim('"') ?: "pending", Color(0xFFFFB95C)) }
     }
     if (withdrawalOpen) {
         AlertDialog(

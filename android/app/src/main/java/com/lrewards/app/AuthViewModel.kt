@@ -14,11 +14,27 @@ data class AuthState(
     val error: String? = null,
 )
 
+data class WalletState(
+    val transactions: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    val withdrawals: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    val loading: Boolean = false,
+    val error: String? = null,
+)
+
 class AuthViewModel(
     private val repository: RewardsRepository = RewardsRepository(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(AuthState())
     val state: StateFlow<AuthState> = _state
+    private val _wallet = MutableStateFlow(WalletState())
+    val wallet: StateFlow<WalletState> = _wallet
+
+    fun loadWallet() = viewModelScope.launch {
+        _wallet.value = WalletState(loading = true)
+        runCatching { repository.rewardTransactions() to repository.withdrawalHistory() }
+            .onSuccess { (transactions, withdrawals) -> _wallet.value = WalletState(transactions, withdrawals) }
+            .onFailure { _wallet.value = WalletState(error = "Unable to load wallet history") }
+    }
 
     fun signIn(email: String, password: String) = viewModelScope.launch {
         _state.value = AuthState(loading = true)
@@ -28,6 +44,7 @@ class AuthViewModel(
                     signedIn = true,
                     email = repository.currentEmail().orEmpty(),
                 )
+                loadWallet()
             }
             .onFailure {
                 _state.value = AuthState(

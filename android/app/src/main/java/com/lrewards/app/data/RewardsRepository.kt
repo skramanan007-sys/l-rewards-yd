@@ -3,6 +3,7 @@ package com.lrewards.app.data
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -46,4 +47,10 @@ class RewardsRepository {
                 put("p_cost", JsonPrimitive(cost))
             },
         ).decodeAs()
+
+    suspend fun rewardTransactions(): List<JsonObject> =
+        supabase.postgrest.from("transactions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
+
+    suspend fun withdrawalHistory(): List<JsonObject> =
+        supabase.postgrest.from("redemptions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
 }
