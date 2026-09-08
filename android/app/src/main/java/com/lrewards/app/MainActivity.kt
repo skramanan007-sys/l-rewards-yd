@@ -50,6 +50,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -186,8 +188,8 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
             when (tab) {
                 0, 1 -> EarnPage(games) { selectedGame = it }
                 2 -> WalletPage(coins, wallet.transactions, wallet.withdrawals)
-                3 -> RedeemPage(coins) { type, cost, destination ->
-                    auth.requestRedemption(type, cost, destination) { balance, error ->
+                3 -> RedeemPage(coins, wallet.rewards) { rewardId, cost, destination ->
+                    auth.requestRedemption(rewardId, cost, destination) { balance, error ->
                         message = error ?: "${type.replaceFirstChar { it.uppercase() }} redemption requested"
                         auth.loadWallet()
                     }
@@ -264,14 +266,19 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
     val rotation = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val captcha = remember { (1..6).map { "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".random() }.joinToString("") }
-    val quiz = remember { listOf("12 + 8 = ?" to listOf("18", "20", "22"), "7 × 6 = ?" to listOf("36", "42", "48"), "45 ÷ 5 = ?" to listOf("7", "8", "9"), "19 − 7 = ?" to listOf("10", "12", "14"), "8 × 4 = ?" to listOf("24", "32", "36")).map { it.first to it.second.shuffled() } }
-    val answers = listOf("20", "42", "9", "12", "32")
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Panel,
-        title = { Text(game.name, color = Color.White, fontWeight = FontWeight.Black) },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    val quizData = remember { List(5) { val a = Random.nextInt(2, 13); val b = Random.nextInt(2, 13); val answer = a + b; Triple("$a + $b = ?", listOf(answer - 2, answer, answer + 3).map(Int::toString).shuffled(), answer.toString()) } }
+    val quiz = quizData.map { it.first to it.second }
+    val answers = quizData.map { it.third }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(color = Ink, modifier = Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(game.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    TextButton(onClick = onDismiss) { Text("CLOSE", color = Mint) }
+                }
+                Text(game.subtitle, color = Muted)
+                Spacer(Modifier.height(16.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(game.subtitle, color = Muted)
                 Spacer(Modifier.height(12.dp))
                 when (game.name) {
@@ -381,9 +388,10 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close", color = Mint) } },
-    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -411,13 +419,15 @@ private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json
 }
 
 @Composable
-private fun RedeemPage(coins: Int, onRedeem: (String, Int, String) -> Unit) {
+private fun RedeemPage(coins: Int, rewards: List<kotlinx.serialization.json.JsonObject>, onRedeem: (String, Int, String) -> Unit) {
     var destination by remember { mutableStateOf("") }
-    val options = listOf(
-        Triple("upi", "UPI Cash", listOf(1000 to "₹10", 2000 to "₹20", 3000 to "₹30")),
-        Triple("amazon", "Amazon Gift Cards", listOf(1000 to "₹10", 2500 to "₹25", 5000 to "₹50")),
-        Triple("google_play", "Google Play Gift Cards", listOf(1000 to "₹10", 2500 to "₹25", 5000 to "₹50")),
-    )
+    val options = rewards.mapNotNull { reward ->
+        val id = reward["id"]?.toString()?.trim('"') ?: return@mapNotNull null
+        val type = reward["type"]?.toString()?.trim('"') ?: return@mapNotNull null
+        val name = reward["name"]?.toString()?.trim('"') ?: type
+        val cost = reward["cost"]?.toString()?.trim('"')?.toIntOrNull() ?: return@mapNotNull null
+        Triple(id, "$type|$name", cost)
+    }.ifEmpty { listOf(Triple("upi", "upi|UPI Cash", 1000), Triple("amazon", "amazon|Amazon Gift Card", 1000), Triple("google_play", "google_play|Google Play Gift Card", 1000)) }
     Column {
         Text("Redeem", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
         Text("Choose a real payout reward", color = Muted)
@@ -425,13 +435,14 @@ private fun RedeemPage(coins: Int, onRedeem: (String, Int, String) -> Unit) {
         Text("Your balance: $coins coins · ₹${"%.2f".format(coins / 100.0)} available value", color = Mint)
         OutlinedTextField(destination, { destination = it }, label = { Text("UPI ID or gift-card email") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, focusedBorderColor = Green, unfocusedBorderColor = Muted), modifier = Modifier.fillMaxWidth().padding(top = 14.dp))
         Spacer(Modifier.height(18.dp))
-        options.forEach { (type, label, payouts) ->
-            Text(label, color = Mint, fontSize = 18.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 10.dp, bottom = 8.dp))
-            payouts.forEach { (cost, value) ->
+        options.groupBy { it.second.substringBefore('|') }.forEach { (type, entries) ->
+            Text(when (type) { "upi" -> "UPI Cash"; "amazon" -> "Amazon Gift Cards"; "google_play" -> "Google Play Gift Cards"; else -> type.replaceFirstChar { it.uppercase() } }, color = Mint, fontSize = 18.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 10.dp, bottom = 8.dp))
+            entries.forEach { (id, descriptor, cost) ->
+                val label = descriptor.substringAfter('|')
                 Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) { Text("$label $value", color = Color.White, fontWeight = FontWeight.Bold); Text("$cost coins · $value", color = Muted, fontSize = 12.sp) }
-                        Button(enabled = coins >= cost && destination.trim().length >= 3, onClick = { onRedeem(type, cost, destination.trim()) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (coins >= cost) "Redeem" else "Need more") }
+                        Column(Modifier.weight(1f)) { Text(label, color = Color.White, fontWeight = FontWeight.Bold); Text("$cost coins · ₹${cost / 100}", color = Muted, fontSize = 12.sp) }
+                        Button(enabled = coins >= cost && destination.trim().length >= 3, onClick = { onRedeem(id, cost, destination.trim()) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (coins >= cost) "REQUEST" else "NEED MORE") }
                     }
                 }
             }

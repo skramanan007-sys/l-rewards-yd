@@ -17,6 +17,7 @@ data class AuthState(
 data class WalletState(
     val transactions: List<kotlinx.serialization.json.JsonObject> = emptyList(),
     val withdrawals: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    val rewards: List<kotlinx.serialization.json.JsonObject> = emptyList(),
     val balance: Int = 0,
     val loading: Boolean = false,
     val error: String? = null,
@@ -31,11 +32,11 @@ class AuthViewModel(
     val wallet: StateFlow<WalletState> = _wallet
     fun loadWallet() = viewModelScope.launch {
         _wallet.value = WalletState(loading = true)
-        runCatching { repository.rewardTransactions() to repository.withdrawalHistory() }
-            .onSuccess { (transactions, withdrawals) ->
+        runCatching { Triple(repository.rewardTransactions(), repository.withdrawalHistory(), repository.rewardCatalog()) }
+            .onSuccess { (transactions, withdrawals, rewards) ->
                 val earned = transactions.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: it["coins"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
                 val spent = withdrawals.filter { it["status"]?.toString()?.trim('"') != "rejected" }.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: it["cost"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
-                _wallet.value = WalletState(transactions, withdrawals, (earned - spent).coerceAtLeast(0))
+                _wallet.value = WalletState(transactions, withdrawals, rewards, (earned - spent).coerceAtLeast(0))
             }
             .onFailure { _wallet.value = WalletState(error = "Unable to load wallet history") }
     }
