@@ -117,6 +117,7 @@ private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel)
     var tab by remember { mutableIntStateOf(0) }
     var coins by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Game?>(null) }
+    var showRedemption by remember { mutableStateOf(false) }
     val games = listOf(
         Game("Spin Wheel", "Try your luck", "1–10 coins", "5 plays", Icons.Rounded.Casino, Lime),
         Game("Scratch Card", "Reveal a prize", "0–5 coins", "3 plays", Icons.Rounded.Scratchpad, Color(0xFFFFB95C)),
@@ -129,11 +130,16 @@ private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel)
             Spacer(Modifier.height(18.dp))
             BalanceCard(coins)
             Spacer(Modifier.height(22.dp))
-            when (tab) { 0, 1 -> EarnPage(games) { selected = it }; 2 -> WalletPage(coins); else -> ProfilePage(email, signOut) }
+            when (tab) { 0, 1 -> EarnPage(games) { selected = it }; 2 -> WalletPage(coins) { showRedemption = true }; else -> ProfilePage(email, signOut) }
             Spacer(Modifier.weight(1f))
             BottomBar(tab) { tab = it }
         }
         selected?.let { game -> GameDialog(game, onDismiss = { selected = null }) { reward -> auth.playGame(game.title.toGameType(), reward) { balance, error -> if (balance != null) coins = balance; selected = null } } }
+        if (showRedemption) RedemptionDialog(
+            coins = coins,
+            onDismiss = { showRedemption = false },
+            onRequest = { type, cost -> auth.requestRedemption(type, cost) { balance, _ -> if (balance != null) coins = balance; showRedemption = false } },
+        )
     }
 }
 
@@ -147,7 +153,7 @@ private fun RewardsHome(email: String, signOut: () -> Unit, auth: AuthViewModel)
 
 @Composable private fun GameDialog(game: Game, onDismiss: () -> Unit, onReward: (Int) -> Unit) { var answer by remember { mutableStateOf("") }; AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text(game.title, color = Color.White, fontWeight = FontWeight.Black) }, text = { Column { Text("Complete this challenge to earn coins.", color = Muted); Spacer(Modifier.height(14.dp)); Text(if (game.title == "Captcha") "What is 5 + 3?" else "Your reward is ready to claim.", color = Mint, fontSize = 18.sp, fontWeight = FontWeight.Bold); if (game.title == "Captcha") { Spacer(Modifier.height(10.dp)); OutlinedTextField(answer, { answer = it }, label = { Text("Answer") }) } } }, confirmButton = { Button(onClick = { if (game.title != "Captcha" || answer == "8") onReward(if (game.title == "Spin Wheel") 7 else if (game.title == "Scratch Card") 3 else if (game.title == "Math Quiz") 5 else 2) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Claim reward") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Later", color = Mint) } }) }
 
-@Composable private fun WalletPage(coins: Int) { Column { Text("Wallet", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Your reward balance", color = Muted); Spacer(Modifier.height(16.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("AVAILABLE", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text("$coins coins", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black); Spacer(Modifier.height(12.dp)); Text("Redemptions will appear here", color = Muted) } } } }
+@Composable private fun WalletPage(coins: Int, onRedeem: () -> Unit) { Column { Text("Wallet", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Your reward balance", color = Muted); Spacer(Modifier.height(16.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("AVAILABLE", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text("$coins coins", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black); Spacer(Modifier.height(12.dp)); Button(onClick = onRedeem, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Redeem from 100 coins") }; Spacer(Modifier.height(8.dp)); Text("Requests are reviewed before payout", color = Muted, fontSize = 12.sp) } } } }\n\n@Composable private fun RedemptionDialog(coins: Int, onDismiss: () -> Unit, onRequest: (String, Int) -> Unit) { AlertDialog(onDismissRequest = onDismiss, containerColor = SurfaceGreen, title = { Text("Request a reward", color = Color.White, fontWeight = FontWeight.Black) }, text = { Column { Text("Your balance: $coins coins", color = Mint); Spacer(Modifier.height(10.dp)); Text("Choose a 100-coin digital reward. An admin will review it.", color = Muted) } }, confirmButton = { Button(onClick = { onRequest("Digital reward", 100) }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("Request") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Mint) } }) }
 
 @Composable private fun ProfilePage(email: String, signOut: () -> Unit) { Column { Text("Profile", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black); Text("Manage your L Rewards account", color = Muted); Spacer(Modifier.height(16.dp)); Card(colors = CardDefaults.cardColors(containerColor = SurfaceGreen), shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp)) { Text("ACCOUNT", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold); Text(email, color = Color.White, modifier = Modifier.padding(top = 8.dp)); Spacer(Modifier.height(18.dp)); Button(onClick = signOut, colors = ButtonDefaults.buttonColors(containerColor = SoftGreen)) { Text("Sign out", color = Color.White) } } } } }
 
