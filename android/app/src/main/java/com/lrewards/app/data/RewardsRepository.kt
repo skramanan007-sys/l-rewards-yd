@@ -4,7 +4,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.rpc
-import io.github.jan.supabase.postgrest.query.filter.eq
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -40,7 +40,7 @@ class RewardsRepository {
 
     suspend fun currentProfile(): Profile? {
         val id = supabase.auth.currentUserOrNull()?.id ?: return null
-        return supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingleOrNull<Profile>()
+        return supabase.from("profiles").select { filter { filter("id", FilterOperator.EQ, id) } }.decodeSingleOrNull<Profile>()
     }
 
     suspend fun claimReward(gameType: String, amount: Int): JsonObject = supabase.rpc("claim_reward", parameters = buildJsonObject {
@@ -51,13 +51,13 @@ class RewardsRepository {
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
     suspend fun transactions(userId: String): List<Transaction> = supabase.from("transactions").select {
-        filter { eq("user_id", userId) }
+        filter { filter("user_id", FilterOperator.EQ, userId) }
     }.decodeList()
 
     suspend fun updateProfile(displayName: String): Profile {
         val id = currentUserId() ?: error("not_authenticated")
         return supabase.from("profiles").update({ set("display_name", displayName.trim()) }) {
-            filter { eq("id", id) }
+filter { filter("id", FilterOperator.EQ, id) }
         }.decodeSingle()
     }
 
@@ -69,10 +69,10 @@ class RewardsRepository {
         }).decodeAs()
 
     suspend fun redemptions(userId: String): List<Redemption> = supabase.from("redemptions").select {
-        filter { eq("user_id", userId) }
+        filter { filter("user_id", FilterOperator.EQ, userId) }
     }.decodeList()
 
-    suspend fun adminMetrics(): AdminMetrics = supabase.rpc("admin_metrics", parameters = emptyMap<String, String>()).decodeAs()
+    suspend fun adminMetrics(): AdminMetrics = supabase.rpc("admin_metrics", parameters = buildJsonObject {}).decodeAs()
 
     suspend fun adminAdjustCoins(userId: String, amount: Int): Profile =
         supabase.rpc("admin_set_user_coins", parameters = buildJsonObject {
