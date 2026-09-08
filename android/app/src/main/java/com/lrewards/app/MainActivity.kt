@@ -250,6 +250,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
     var spinning by remember { mutableStateOf(false) }
     var scratchIndex by remember { mutableIntStateOf(-1) }
     var captchaInput by remember { mutableStateOf("") }
+    var captchaError by remember { mutableStateOf<String?>(null) }
     var questionIndex by remember { mutableIntStateOf(0) }
     var quizScore by remember { mutableIntStateOf(0) }
     val rotation = remember { Animatable(0f) }
@@ -337,9 +338,15 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                         if (revealed.value) Button(onClick = { onReward(reward) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("COLLECT $reward COINS") }
                     }
                     "Captcha" -> {
-                        Text(captcha, color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                        OutlinedTextField(captchaInput, { captchaInput = it }, label = { Text("Type the code") }, singleLine = true)
-                        Button(onClick = { if (captchaInput.equals(captcha, ignoreCase = true)) onReward(2) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("VERIFY") }
+                        Card(colors = CardDefaults.cardColors(containerColor = Panel2), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("SECURITY CHECK · +2 COINS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(captcha.mapIndexed { index, char -> if (index % 2 == 0) " $char " else " ̸$char " }.joinToString(""), color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        OutlinedTextField(captchaInput, { captchaInput = it; captchaError = null }, label = { Text("Type the code") }, singleLine = true)
+                        captchaError?.let { Text(it, color = Color(0xFFFF9E91), fontSize = 12.sp) }
+                        Button(onClick = { if (captchaInput.trim().equals(captcha, ignoreCase = true)) onReward(2) else { captchaError = "Code does not match. Try again."; captchaInput = "" } }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("VERIFY CAPTCHA · +2") }
                     }
                     else -> {
                         Text("Question ${questionIndex + 1} of 5", color = Mint, fontWeight = FontWeight.Bold)
