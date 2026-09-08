@@ -2,6 +2,7 @@ package com.lrewards.app.data
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 
@@ -26,4 +27,13 @@ class RewardsRepository {
     suspend fun signOut() = supabase.auth.signOut()
 
     fun currentEmail(): String? = supabase.auth.currentUserOrNull()?.email
+
+    suspend fun playGame(gameType: String, amount: Int): JsonObject =
+        supabase.postgrest.rpc(
+            "play_reward_game",
+            parameters = buildJsonObject {
+                put("p_game_type", JsonPrimitive(gameType))
+                put("p_amount", JsonPrimitive(amount))
+            },
+        ).decodeAs()
 }
