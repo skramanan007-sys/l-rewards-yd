@@ -22,6 +22,14 @@ data class WalletState(
     val error: String? = null,
 )
 
+data class AdminState(
+    val users: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    val transactions: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    val redemptions: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    val loading: Boolean = false,
+    val error: String? = null,
+)
+
 class AuthViewModel(
     private val repository: RewardsRepository = RewardsRepository(),
 ) : ViewModel() {
@@ -29,6 +37,15 @@ class AuthViewModel(
     val state: StateFlow<AuthState> = _state
     private val _wallet = MutableStateFlow(WalletState())
     val wallet: StateFlow<WalletState> = _wallet
+    private val _admin = MutableStateFlow(AdminState())
+    val admin: StateFlow<AdminState> = _admin
+
+    fun loadAdmin() = viewModelScope.launch {
+        _admin.value = AdminState(loading = true)
+        runCatching { Triple(repository.adminUsers(), repository.adminTransactions(), repository.adminRedemptions()) }
+            .onSuccess { (users, transactions, redemptions) -> _admin.value = AdminState(users, transactions, redemptions) }
+            .onFailure { _admin.value = AdminState(error = "Unable to load admin data") }
+    }
 
     fun loadWallet() = viewModelScope.launch {
         _wallet.value = WalletState(loading = true)

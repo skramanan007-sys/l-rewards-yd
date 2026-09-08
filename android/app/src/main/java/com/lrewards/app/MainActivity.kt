@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.CardGiftcard
@@ -158,6 +159,8 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
     var selectedGame by remember { mutableStateOf<Game?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     val wallet by auth.wallet.collectAsState()
+    val admin by auth.admin.collectAsState()
+    val isAdmin = email.endsWith("@lrewards.app") || email.startsWith("admin@")
     val coins = wallet.balance
     val games = remember {
         listOf(
@@ -186,23 +189,23 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
             Spacer(Modifier.height(18.dp))
             when (tab) {
                 0, 1 -> EarnPage(games) { selectedGame = it }
-                2 -> WalletPage(coins, wallet.transactions)
+                2 -> WalletPage(coins, wallet.transactions, wallet.withdrawals)
                 3 -> RedeemPage(coins) { type, cost, destination ->
                     auth.requestRedemption(type, cost, destination) { balance, error ->
-                        if (balance != null) coins = balance
                         message = error ?: "${type.replaceFirstChar { it.uppercase() }} redemption requested"
                         auth.loadWallet()
                     }
                 }
+                4 -> ProfilePage(email, auth::signOut)
+                5 -> if (isAdmin) AdminPage(admin) else ProfilePage(email, auth::signOut)
                 else -> ProfilePage(email, auth::signOut)
             }
             Spacer(Modifier.weight(1f))
-            BottomBar(tab) { tab = it }
+            BottomBar(tab, isAdmin) { tab = it; if (it == 5) auth.loadAdmin() }
         }
         selectedGame?.let { game ->
             GameExperience(game, onDismiss = { selectedGame = null }) { amount ->
                 auth.playGame(game.name.toType(), amount) { balance, error ->
-                    if (balance != null) coins = balance
                     message = error ?: "+$amount coins added"
                     auth.loadWallet()
                     selectedGame = null
@@ -389,7 +392,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
 }
 
 @Composable
-private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json.JsonObject>) {
+private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json.JsonObject>, withdrawals: List<kotlinx.serialization.json.JsonObject>) {
     Column {
         Text("Wallet", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
         Text("Your earnings and reward history", color = Muted)
@@ -407,6 +410,8 @@ private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json
         Text("REWARD HISTORY", color = Mint, fontWeight = FontWeight.Bold)
         if (transactions.isEmpty()) Text("No earning transactions yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else transactions.take(5).forEach { transaction -> HistoryRow(transaction["game_type"]?.toString()?.trim('"')?.replaceFirstChar { it.uppercase() } ?: transaction["type"]?.toString()?.trim('"') ?: "Reward", "+${transaction["amount"] ?: transaction["coins"] ?: 0} coins", transaction["created_at"]?.toString()?.trim('"') ?: "Completed", Lime) }
         Spacer(Modifier.height(14.dp))
+        Text("REDEMPTION HISTORY", color = Mint, fontWeight = FontWeight.Bold)
+        if (withdrawals.isEmpty()) Text("No redemption requests yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else withdrawals.take(10).forEach { item -> HistoryRow(item["reward_type"]?.toString()?.trim('"') ?: item["reward"]?.toString()?.trim('"') ?: "Redemption", item["status"]?.toString()?.trim('"') ?: "pending", item["created_at"]?.toString()?.trim('"') ?: "Submitted", Color(0xFFFFB95C)) }
     }
 }
 
@@ -437,6 +442,33 @@ private fun RedeemPage(coins: Int, onRedeem: (String, Int, String) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun AdminPage(state: AdminState) {
+    Column {
+        Text("Admin panel", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+        Text("L Rewards operations overview", color = Muted)
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            AdminStat("Users", state.users.size.toString())
+            AdminStat("Earned", state.transactions.size.toString())
+            AdminStat("Redeems", state.redemptions.size.toString())
+        }
+        Spacer(Modifier.height(18.dp))
+        Text("RECENT REDEMPTIONS", color = Mint, fontWeight = FontWeight.Bold)
+        if (state.redemptions.isEmpty()) Text("No redemption requests", color = Muted, modifier = Modifier.padding(top = 8.dp)) else state.redemptions.take(12).forEach { item ->
+            HistoryRow(item["reward_type"]?.toString()?.trim('"') ?: item["reward"]?.toString()?.trim('"') ?: "Redemption", item["status"]?.toString()?.trim('"') ?: "pending", item["created_at"]?.toString()?.trim('"') ?: "", Color(0xFFFFB95C))
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("RECENT USERS", color = Mint, fontWeight = FontWeight.Bold)
+        state.users.take(8).forEach { user -> Text(user["email"]?.toString()?.trim('"') ?: user["display_name"]?.toString()?.trim('"') ?: "User", color = Color.White, modifier = Modifier.padding(top = 8.dp)) }
+    }
+}
+
+@Composable
+private fun AdminStat(label: String, value: String) {
+    Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f)) { Column(Modifier.padding(12.dp)) { Text(label, color = Muted, fontSize = 11.sp); Text(value, color = Lime, fontSize = 22.sp, fontWeight = FontWeight.Black) } }
 }
 
 @Composable
@@ -482,9 +514,12 @@ private fun SettingRow(title: String, detail: String, icon: ImageVector) {
 }
 
 @Composable
-private fun BottomBar(selected: Int, onSelected: (Int) -> Unit) {
+private fun BottomBar(selected: Int, isAdmin: Boolean, onSelected: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(8.dp), horizontalArrangement = Arrangement.SpaceAround) {
-        val icons = listOf(Icons.Rounded.Home, Icons.Rounded.SportsEsports, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.CardGiftcard, Icons.Rounded.Person)
+        val icons = buildList {
+            addAll(listOf(Icons.Rounded.Home, Icons.Rounded.SportsEsports, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.CardGiftcard, Icons.Rounded.Person))
+            if (isAdmin) add(Icons.Rounded.AdminPanelSettings)
+        }
         icons.forEachIndexed { index, icon ->
             Icon(icon, contentDescription = null, tint = if (selected == index) Lime else Muted, modifier = Modifier.size(30.dp).clickable { onSelected(index) }.padding(5.dp))
         }

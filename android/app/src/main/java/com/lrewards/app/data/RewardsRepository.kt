@@ -54,4 +54,8 @@ class RewardsRepository {
 
     suspend fun withdrawalHistory(): List<JsonObject> =
         supabase.postgrest.from("redemptions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
+
+    suspend fun adminUsers(): List<JsonObject> = supabase.postgrest.from("profiles").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
+    suspend fun adminTransactions(): List<JsonObject> = supabase.postgrest.from("transactions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
+    suspend fun adminRedemptions(): List<JsonObject> = supabase.postgrest.from("redemptions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
 }
