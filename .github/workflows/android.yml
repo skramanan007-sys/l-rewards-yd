@@ -1,9 +1,5 @@
 name: Android APK
 on:
-  push:
-    paths: ['android/**']
-  pull_request:
-    paths: ['android/**']
   workflow_dispatch:
 jobs:
   build:
