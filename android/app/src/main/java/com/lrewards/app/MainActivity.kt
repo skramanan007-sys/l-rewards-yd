@@ -451,9 +451,9 @@ private fun AdminPage(state: AdminState) {
         Text("L Rewards operations overview", color = Muted)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            AdminStat("Users", state.users.size.toString())
-            AdminStat("Earned", state.transactions.size.toString())
-            AdminStat("Redeems", state.redemptions.size.toString())
+            AdminStat("Users", state.users.size.toString(), Modifier.weight(1f))
+            AdminStat("Earned", state.transactions.size.toString(), Modifier.weight(1f))
+            AdminStat("Redeems", state.redemptions.size.toString(), Modifier.weight(1f))
         }
         Spacer(Modifier.height(18.dp))
         Text("RECENT REDEMPTIONS", color = Mint, fontWeight = FontWeight.Bold)
@@ -467,8 +467,8 @@ private fun AdminPage(state: AdminState) {
 }
 
 @Composable
-private fun AdminStat(label: String, value: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f)) { Column(Modifier.padding(12.dp)) { Text(label, color = Muted, fontSize = 11.sp); Text(value, color = Lime, fontSize = 22.sp, fontWeight = FontWeight.Black) } }
+private fun AdminStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = modifier) { Column(Modifier.padding(12.dp)) { Text(label, color = Muted, fontSize = 11.sp); Text(value, color = Lime, fontSize = 22.sp, fontWeight = FontWeight.Black) } }
 }
 
 @Composable
