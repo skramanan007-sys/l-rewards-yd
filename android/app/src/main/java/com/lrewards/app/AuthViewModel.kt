@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-data class AuthState(val loading: Boolean = false, val signedIn: Boolean = false, val displayName: String = "", val error: String? = null)
+data class AuthState(val loading: Boolean = false, val signedIn: Boolean = false, val displayName: String = "", val email: String = "", val error: String? = null)
 
 class AuthViewModel(private val repository: RewardsRepository = RewardsRepository()) : ViewModel() {
     private val _state = MutableStateFlow(AuthState())
@@ -16,7 +16,7 @@ class AuthViewModel(private val repository: RewardsRepository = RewardsRepositor
     fun signIn(email: String, password: String) = viewModelScope.launch {
         _state.value = AuthState(loading = true)
         runCatching { repository.signIn(email, password); repository.currentProfile() }
-            .onSuccess { _state.value = AuthState(signedIn = true, displayName = it?.display_name.orEmpty()) }
+            .onSuccess { _state.value = AuthState(signedIn = true, displayName = it?.display_name.orEmpty(), email = repository.currentEmail().orEmpty()) }
             .onFailure { _state.value = AuthState(error = "Unable to sign in. Check your credentials and try again.") }
     }
 
