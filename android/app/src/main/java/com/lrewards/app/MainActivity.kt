@@ -39,6 +39,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -177,7 +178,12 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
             Spacer(Modifier.height(18.dp))
             when (tab) {
                 0, 1 -> EarnPage(games) { selectedGame = it }
-                2 -> WalletPage(coins) { message = "Withdrawal options coming next" }
+                2 -> WalletPage(coins) { type ->
+                    auth.requestRedemption(type, 100) { balance, error ->
+                        if (balance != null) coins = balance
+                        message = error ?: "${type.replaceFirstChar { it.uppercase() }} withdrawal request submitted"
+                    }
+                }
                 else -> ProfilePage(email, auth::signOut)
             }
             Spacer(Modifier.weight(1f))
@@ -344,7 +350,9 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
 }
 
 @Composable
-private fun WalletPage(coins: Int, onWithdraw: () -> Unit) {
+private fun WalletPage(coins: Int, onWithdraw: (String) -> Unit) {
+    var withdrawalOpen by remember { mutableStateOf(false) }
+    var selectedMethod by remember { mutableStateOf("upi") }
     Column {
         Text("Wallet", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
         Text("Your earnings and reward history", color = Muted)
@@ -355,7 +363,7 @@ private fun WalletPage(coins: Int, onWithdraw: () -> Unit) {
                 Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
                 Text("100 coins = ₹1", color = Muted, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = onWithdraw, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("WITHDRAW REWARDS") }
+                Button(onClick = { withdrawalOpen = true }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("WITHDRAW REWARDS") }
             }
         }
         Spacer(Modifier.height(18.dp))
@@ -365,6 +373,28 @@ private fun WalletPage(coins: Int, onWithdraw: () -> Unit) {
         Spacer(Modifier.height(14.dp))
         Text("WITHDRAWAL HISTORY", color = Mint, fontWeight = FontWeight.Bold)
         Text("No withdrawal requests yet", color = Muted, modifier = Modifier.padding(top = 8.dp))
+    }
+    if (withdrawalOpen) {
+        AlertDialog(
+            onDismissRequest = { withdrawalOpen = false },
+            containerColor = Panel,
+            title = { Text("Choose withdrawal method", color = Color.White, fontWeight = FontWeight.Black) },
+            text = {
+                Column {
+                    Text("100 coins = ₹1 • Minimum: 100 coins", color = Muted)
+                    listOf("upi" to "UPI", "amazon" to "Amazon Pay", "google_play" to "Google Play").forEach { (value, label) ->
+                        Row(Modifier.fillMaxWidth().clickable { selectedMethod = value }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = selectedMethod == value, onClick = { selectedMethod = value })
+                            Text(label, color = Color.White, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { withdrawalOpen = false; onWithdraw(selectedMethod) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("REQUEST WITHDRAWAL") }
+            },
+            dismissButton = { TextButton(onClick = { withdrawalOpen = false }) { Text("Cancel", color = Mint) } },
+        )
     }
 }
 
