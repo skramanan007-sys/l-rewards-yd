@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Person
@@ -184,10 +185,11 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
             Spacer(Modifier.height(18.dp))
             when (tab) {
                 0, 1 -> EarnPage(games) { selectedGame = it }
-                2 -> WalletPage(coins, wallet.transactions, wallet.withdrawals) { type ->
+                2 -> WalletPage(coins, wallet.transactions)
+                3 -> RedeemPage(coins) { type ->
                     auth.requestRedemption(type, 100) { balance, error ->
                         if (balance != null) coins = balance
-                        message = error ?: "${type.replaceFirstChar { it.uppercase() }} withdrawal request submitted"
+                        message = error ?: "${type.replaceFirstChar { it.uppercase() }} redemption requested"
                         auth.loadWallet()
                     }
                 }
@@ -263,7 +265,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
     val rotation = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val captcha = remember { (1..6).map { "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".random() }.joinToString("") }
-    val quiz = remember { listOf("12 + 8 = ?" to listOf("18", "20", "22"), "7 × 6 = ?" to listOf("36", "42", "48"), "45 ÷ 5 = ?" to listOf("7", "8", "9"), "19 − 7 = ?" to listOf("10", "12", "14"), "8 × 4 = ?" to listOf("24", "32", "36")) }
+    val quiz = remember { listOf("12 + 8 = ?" to listOf("18", "20", "22"), "7 × 6 = ?" to listOf("36", "42", "48"), "45 ÷ 5 = ?" to listOf("7", "8", "9"), "19 − 7 = ?" to listOf("10", "12", "14"), "8 × 4 = ?" to listOf("24", "32", "36")).map { it.first to it.second.shuffled() } }
     val answers = listOf("20", "42", "9", "12", "32")
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -386,9 +388,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
 }
 
 @Composable
-private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json.JsonObject>, withdrawals: List<kotlinx.serialization.json.JsonObject>, onWithdraw: (String) -> Unit) {
-    var withdrawalOpen by remember { mutableStateOf(false) }
-    var selectedMethod by remember { mutableStateOf("upi") }
+private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json.JsonObject>) {
     Column {
         Text("Wallet", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
         Text("Your earnings and reward history", color = Muted)
@@ -399,37 +399,34 @@ private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json
                 Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
                 Text("100 coins = ₹1", color = Muted, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = { withdrawalOpen = true }, enabled = coins >= 100, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("WITHDRAW REWARDS") }
+                Text("Use the Redeem tab to choose UPI, Amazon Pay, or Google Play", color = Muted, fontSize = 12.sp)
             }
         }
         Spacer(Modifier.height(18.dp))
         Text("REWARD HISTORY", color = Mint, fontWeight = FontWeight.Bold)
-        if (transactions.isEmpty()) Text("No earning transactions yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else transactions.take(5).forEach { transaction -> HistoryRow(transaction["type"]?.toString()?.trim('"') ?: "Reward", "+${transaction["amount"] ?: 0} coins", transaction["created_at"]?.toString()?.trim('"') ?: "", Lime) }
+        if (transactions.isEmpty()) Text("No earning transactions yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else transactions.take(5).forEach { transaction -> HistoryRow(transaction["game_type"]?.toString()?.trim('"')?.replaceFirstChar { it.uppercase() } ?: transaction["type"]?.toString()?.trim('"') ?: "Reward", "+${transaction["amount"] ?: transaction["coins"] ?: 0} coins", transaction["created_at"]?.toString()?.trim('"') ?: "Completed", Lime) }
         Spacer(Modifier.height(14.dp))
-        Text("WITHDRAWAL HISTORY", color = Mint, fontWeight = FontWeight.Bold)
-        if (withdrawals.isEmpty()) Text("No withdrawal requests yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else withdrawals.take(5).forEach { withdrawal -> HistoryRow(withdrawal["reward_type"]?.toString()?.trim('"') ?: "Withdrawal", "-${withdrawal["amount"] ?: 0} coins", withdrawal["status"]?.toString()?.trim('"') ?: "pending", Color(0xFFFFB95C)) }
     }
-    if (withdrawalOpen) {
-        AlertDialog(
-            onDismissRequest = { withdrawalOpen = false },
-            containerColor = Panel,
-            title = { Text("Choose withdrawal method", color = Color.White, fontWeight = FontWeight.Black) },
-            text = {
-                Column {
-                    Text("100 coins = ₹1 • Minimum: 100 coins", color = Muted)
-                    listOf("upi" to "UPI", "amazon" to "Amazon Pay", "google_play" to "Google Play").forEach { (value, label) ->
-                        Row(Modifier.fillMaxWidth().clickable { selectedMethod = value }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = selectedMethod == value, onClick = { selectedMethod = value })
-                            Text(label, color = Color.White, modifier = Modifier.padding(start = 8.dp))
-                        }
-                    }
+}
+
+@Composable
+private fun RedeemPage(coins: Int, onRedeem: (String) -> Unit) {
+    Column {
+        Text("Redeem rewards", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+        Text("Choose where you want to receive your reward", color = Muted)
+        Spacer(Modifier.height(18.dp))
+        Text("AVAILABLE", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
+        Text("Minimum redemption: 100 coins", color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(18.dp))
+        listOf("upi" to "UPI", "amazon" to "Amazon Pay", "google_play" to "Google Play").forEach { (type, label) ->
+            Card(onClick = { if (coins >= 100) onRedeem(type) }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(46.dp).background(Green.copy(alpha = .16f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.AccountBalanceWallet, contentDescription = null, tint = Lime) }
+                    Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(label, color = Color.White, fontWeight = FontWeight.Black); Text(if (coins >= 100) "Redeem 100 coins" else "Need ${100 - coins} more coins", color = Muted, fontSize = 12.sp) }; Text("›", color = Lime, fontSize = 28.sp)
                 }
-            },
-            confirmButton = {
-                Button(onClick = { withdrawalOpen = false; onWithdraw(selectedMethod) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("REQUEST WITHDRAWAL") }
-            },
-            dismissButton = { TextButton(onClick = { withdrawalOpen = false }) { Text("Cancel", color = Mint) } },
-        )
+            }
+        }
     }
 }
 
@@ -478,7 +475,7 @@ private fun SettingRow(title: String, detail: String, icon: ImageVector) {
 @Composable
 private fun BottomBar(selected: Int, onSelected: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(8.dp), horizontalArrangement = Arrangement.SpaceAround) {
-        val icons = listOf(Icons.Rounded.Home, Icons.Rounded.SportsEsports, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.Person)
+        val icons = listOf(Icons.Rounded.Home, Icons.Rounded.SportsEsports, Icons.Rounded.AccountBalanceWallet, Icons.Rounded.CardGiftcard, Icons.Rounded.Person)
         icons.forEachIndexed { index, icon ->
             Icon(icon, contentDescription = null, tint = if (selected == index) Lime else Muted, modifier = Modifier.size(30.dp).clickable { onSelected(index) }.padding(5.dp))
         }
