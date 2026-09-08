@@ -155,10 +155,10 @@ private data class Game(val name: String, val subtitle: String, val reward: Stri
 @Composable
 private fun RewardsHome(email: String, auth: AuthViewModel) {
     var tab by remember { mutableIntStateOf(0) }
-    var coins by remember { mutableIntStateOf(0) }
     var selectedGame by remember { mutableStateOf<Game?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     val wallet by auth.wallet.collectAsState()
+    val coins = wallet.balance
     val games = remember {
         listOf(
             Game("Spin Wheel", "Spin for a surprise", "1–10 coins", "5 today", Icons.Rounded.Casino, Lime),
@@ -362,7 +362,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                                 Text(captcha.mapIndexed { index, char -> if (index % 2 == 0) " $char " else " ̸$char " }.joinToString(""), color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
                             }
                         }
-                        OutlinedTextField(captchaInput, { captchaInput = it; captchaError = null }, label = { Text("Type the code") }, singleLine = true)
+                        OutlinedTextField(captchaInput, { captchaInput = it; captchaError = null }, label = { Text("Type the code", color = Mint) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Lime, focusedBorderColor = Green, unfocusedBorderColor = Muted, focusedLabelColor = Mint, unfocusedLabelColor = Mint))
                         captchaError?.let { Text(it, color = Color(0xFFFF9E91), fontSize = 12.sp) }
                         Button(onClick = { if (captchaInput.trim().equals(captcha, ignoreCase = true)) onReward(2) else { captchaError = "Code does not match. Try again."; captchaInput = "" } }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text("VERIFY CAPTCHA · +2") }
                     }
@@ -400,7 +400,7 @@ private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json
                 Text("$coins coins", color = Lime, fontSize = 30.sp, fontWeight = FontWeight.Black)
                 Text("100 coins = ₹1", color = Muted, fontSize = 12.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Use the Redeem tab to choose UPI, Amazon Pay, or Google Play", color = Muted, fontSize = 12.sp)
+                Text("Redeem options: UPI Cash • Amazon Gift Cards • Google Play", color = Mint, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(18.dp))
