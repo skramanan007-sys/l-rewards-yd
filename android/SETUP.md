@@ -6,12 +6,14 @@ Native Kotlin + Jetpack Compose project for L Rewards. The app uses a premium da
 
 1. Open the `android` directory in Android Studio Ladybug or newer.
 2. Use JDK 17 and install Android SDK 35.
-3. Add the client-safe Supabase values to `android/gradle.properties`:
+3. Configure the client-safe values for the new Supabase project. For local Android Studio builds, add them to `android/gradle.properties`:
 
 ```properties
-supabaseUrl=https://xgwprwljmrutkrtmcdff.supabase.co
+supabaseUrl=https://your-project.supabase.co
 supabasePublishableKey=YOUR_PUBLISHABLE_KEY
 ```
+
+CI builds can provide `SUPABASE_URL_2` and `SUPABASE_PUBLISHABLE_KEY_2` as environment variables instead. `SUPABASE_SECRET_KEY_2` and `SUPABASE_JWKS_URL` are server-side values and must not be placed in the Android project or APK.
 
 Never put the Supabase secret/service-role key in the Android project or APK.
 

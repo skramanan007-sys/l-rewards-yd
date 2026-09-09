@@ -12,8 +12,10 @@ android { namespace = "com.lrewards.app"; compileSdk = 35
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "SUPABASE_URL", "\"${project.findProperty("supabaseUrl") ?: "https://yccdlpmicjzziagvutux.supabase.co"}\"")
-        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${project.findProperty("supabasePublishableKey") ?: "sb_publishable_CKDKhNEb9fVVw8U1amhL4w_tHn8ELUs"}\"")
+        val supabaseUrl = project.findProperty("supabaseUrl") ?: System.getenv("SUPABASE_URL_2") ?: error("Set supabaseUrl or SUPABASE_URL_2")
+        val supabasePublishableKey = project.findProperty("supabasePublishableKey") ?: System.getenv("SUPABASE_PUBLISHABLE_KEY_2") ?: error("Set supabasePublishableKey or SUPABASE_PUBLISHABLE_KEY_2")
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabasePublishableKey\"")
     }
     buildFeatures { compose = true; buildConfig = true }
     buildTypes { release { isMinifyEnabled = true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") } }
