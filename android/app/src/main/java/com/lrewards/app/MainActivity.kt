@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,6 +97,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun LRewardsApp(auth: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
     val state by auth.state.collectAsState()
+    LaunchedEffect(Unit) { auth.restoreSession() }
     MaterialTheme {
         if (state.signedIn) RewardsHome(state.email, auth) else AuthForm(state, auth)
     }

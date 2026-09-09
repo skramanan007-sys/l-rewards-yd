@@ -30,6 +30,14 @@ class AuthViewModel(
     val state: StateFlow<AuthState> = _state
     private val _wallet = MutableStateFlow(WalletState())
     val wallet: StateFlow<WalletState> = _wallet
+
+    fun restoreSession() = viewModelScope.launch {
+        if (repository.hasSession()) {
+            _state.value = AuthState(signedIn = true, email = repository.currentEmail().orEmpty())
+            loadWallet()
+        }
+    }
+
     fun loadWallet() = viewModelScope.launch {
         _wallet.value = WalletState(loading = true)
         runCatching { Triple(repository.rewardTransactions(), repository.withdrawalHistory(), repository.rewardCatalog()) }
@@ -76,7 +84,11 @@ class AuthViewModel(
 
     fun playGame(gameType: String, amount: Int, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
         runCatching { repository.playGame(gameType, amount) }
-            .onSuccess { result -> onComplete(result["balance"]?.toString()?.toIntOrNull(), null) }
+            .onSuccess { result ->
+                val balance = result["balance"]?.toString()?.trim('"')?.toIntOrNull()
+                if (balance != null) _wallet.value = _wallet.value.copy(balance = balance)
+                onComplete(balance, null)
+            }
             .onFailure { error ->
                 val raw = error.message.orEmpty().lowercase()
                 onComplete(null, if (raw.contains("limit") || raw.contains("daily") || raw.contains("maximum")) "Limit reached for today" else "Unable to claim reward")
@@ -85,7 +97,11 @@ class AuthViewModel(
 
     fun requestRedemption(type: String, cost: Int, destination: String, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
         runCatching { repository.requestRedemption(type, cost, destination) }
-            .onSuccess { result -> onComplete(result["balance"]?.toString()?.toIntOrNull(), null) }
+            .onSuccess { result ->
+                val balance = result["balance"]?.toString()?.trim('"')?.toIntOrNull()
+                if (balance != null) _wallet.value = _wallet.value.copy(balance = balance)
+                onComplete(balance, null)
+            }
             .onFailure { error -> onComplete(null, "Unable to request redemption") }
     }
 }

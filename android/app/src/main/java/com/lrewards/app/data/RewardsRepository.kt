@@ -30,6 +30,8 @@ class RewardsRepository {
 
     fun currentEmail(): String? = supabase.auth.currentUserOrNull()?.email
 
+    fun hasSession(): Boolean = supabase.auth.currentSessionOrNull() != null
+
     suspend fun playGame(gameType: String, amount: Int): JsonObject =
         supabase.postgrest.rpc(
             "play_reward_game",
