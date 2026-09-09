@@ -20,7 +20,16 @@ jobs:
           unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/gradle-8.9/bin" >> "$GITHUB_PATH"
       - run: gradle --version
-      - run: gradle assembleDebug --stacktrace
+      - name: Build debug APK
+        env:
+          SUPABASE_URL_2: ${{ secrets.SUPABASE_URL_2 }}
+          SUPABASE_PUBLISHABLE_KEY_2: ${{ secrets.SUPABASE_PUBLISHABLE_KEY_2 }}
+        run: |
+          test -n "$SUPABASE_URL_2" || (echo "Missing GitHub secret SUPABASE_URL_2" && exit 1)
+          test -n "$SUPABASE_PUBLISHABLE_KEY_2" || (echo "Missing GitHub secret SUPABASE_PUBLISHABLE_KEY_2" && exit 1)
+          gradle assembleDebug --stacktrace \
+            -PsupabaseUrl="$SUPABASE_URL_2" \
+            -PsupabasePublishableKey="$SUPABASE_PUBLISHABLE_KEY_2"
       - uses: actions/upload-artifact@v4
         with:
           name: l-rewards-debug-apk

@@ -9,8 +9,8 @@ Native Kotlin + Jetpack Compose project for L Rewards. The app uses a premium da
 3. Add the client-safe Supabase values to `android/gradle.properties`:
 
 ```properties
-supabaseUrl=https://xgwprwljmrutkrtmcdff.supabase.co
-supabasePublishableKey=YOUR_PUBLISHABLE_KEY
+supabaseUrl=YOUR_CURRENT_SUPABASE_URL
+supabasePublishableKey=YOUR_CURRENT_PUBLISHABLE_KEY
 ```
 
 Never put the Supabase secret/service-role key in the Android project or APK.
@@ -29,7 +29,7 @@ Before release, use a real Supabase account with confirmed email, designate admi
 
 ## Build APK
 
-From Android Studio use **Build > Generate App Bundles or APKs**. The GitHub Actions workflow at `.github/workflows/android.yml` builds and uploads a debug APK whenever files under `android/` change. Configure release signing in CI before publishing a release artifact.
+From Android Studio use **Build > Generate App Bundles or APKs**. The GitHub Actions workflow at `.github/workflows/android.yml` builds and uploads a debug APK when run manually. Add these repository Actions secrets before running it: `SUPABASE_URL_2` and `SUPABASE_PUBLISHABLE_KEY_2`. The workflow injects them only at build time. Never add `SUPABASE_SECRET_KEY_2` or `SUPABASE_JWKS_URL` to GitHub Actions for this Android build. Configure release signing in CI before publishing a release artifact.
 
 ## Admin access
 

@@ -203,9 +203,9 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
             BottomBar(tab) { tab = it }
         }
         selectedGame?.let { game ->
-            GameExperience(game, onDismiss = { selectedGame = null }) { amount ->
-                auth.playGame(game.name.toType(), amount) { balance, error ->
-                    message = error ?: "+$amount coins added"
+            GameExperience(game, onDismiss = { selectedGame = null }) { _ ->
+                auth.playGame(game.name.toType()) { _, error ->
+                    message = error ?: "Reward credited to your wallet"
                     auth.loadWallet()
                     selectedGame = null
                 }
