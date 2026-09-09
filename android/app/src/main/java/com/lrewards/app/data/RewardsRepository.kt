@@ -32,12 +32,12 @@ class RewardsRepository {
 
     fun hasSession(): Boolean = supabase.auth.currentSessionOrNull() != null
 
-    suspend fun playGame(gameType: String, amount: Int): JsonObject =
+    suspend fun playGame(gameType: String, proof: String? = null): JsonObject =
         supabase.postgrest.rpc(
             "play_reward_game",
             parameters = buildJsonObject {
                 put("p_game_type", JsonPrimitive(gameType))
-                put("p_amount", JsonPrimitive(amount))
+                proof?.let { put("p_proof", JsonPrimitive(it)) }
             },
         ).decodeAs()
 
