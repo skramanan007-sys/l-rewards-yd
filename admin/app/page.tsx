@@ -18,7 +18,6 @@ type Row = {
 const statuses: Row['status'][] = ['pending', 'approved', 'paid', 'rejected']
 
 export default function AdminPage() {
-  const client = supabase()
   const [session, setSession] = useState<any>(null)
   const [email, setEmail] = useState('sramanan602@gmail.com')
   const [password, setPassword] = useState('')
@@ -42,7 +41,7 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    client.auth.getSession().then(({ data }) => {
+    supabase().auth.getSession().then(({ data }) => {
       setSession(data.session)
       if (data.session) refresh(data.session)
     })
@@ -51,10 +50,10 @@ export default function AdminPage() {
   async function signIn(event: React.FormEvent) {
     event.preventDefault()
     setMessage('')
-    const { data, error } = await client.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase().auth.signInWithPassword({ email, password })
     if (error) return setMessage('Invalid email or password.')
     if (data.user?.email?.toLowerCase() !== 'sramanan602@gmail.com') {
-      await client.auth.signOut()
+      await supabase().auth.signOut()
       return setMessage('This account is not allowlisted.')
     }
     setSession(data.session)
@@ -106,7 +105,7 @@ export default function AdminPage() {
     <main className="min-h-screen px-4 py-6 md:px-8">
       <header className="mx-auto flex max-w-7xl items-center justify-between gap-4 border-b border-[var(--line)] pb-6">
         <div><p className="text-sm uppercase tracking-[0.22em] text-[var(--accent)]">L Rewards / Operations</p><h1 className="mt-2 text-3xl font-semibold">Withdrawal desk</h1><p className="mt-2 text-[var(--muted)]">Review requests, send the reward manually, then mark it paid.</p></div>
-        <div className="flex items-center gap-3"><button onClick={() => refresh()} className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm">{loading ? 'Refreshing…' : 'Refresh'}</button><button onClick={async () => { await client.auth.signOut(); setSession(null) }} className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm">Sign out</button></div>
+        <div className="flex items-center gap-3"><button onClick={() => refresh()} className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm">{loading ? 'Refreshing…' : 'Refresh'}</button><button onClick={async () => { await supabase().auth.signOut(); setSession(null) }} className="rounded-xl border border-[var(--line)] px-4 py-2 text-sm">Sign out</button></div>
       </header>
       <section className="mx-auto mt-8 grid max-w-7xl gap-4 md:grid-cols-3">
         {([['Open requests', totals.pending], ['Approved to send', totals.approved], ['Paid', totals.paid]] as const).map(([label, value]) => <div key={label} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-5"><p className="text-sm text-[var(--muted)]">{label}</p><strong className="mt-2 block text-3xl">{value}</strong></div>)}
