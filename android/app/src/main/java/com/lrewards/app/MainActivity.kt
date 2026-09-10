@@ -11,6 +11,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -86,7 +88,7 @@ private fun AppShell(email: String, auth: AuthViewModel) {
         Spacer(Modifier.height(18.dp)); Box(Modifier.weight(1f).fillMaxWidth()) { when (tab) { 0 -> HomePage(games) { game = it }; 1 -> WalletPage(coins, wallet.transactions, wallet.withdrawals); 2 -> RedeemPage(coins, wallet.rewards) { id, cost, destination -> if (id == "__back__") tab = 0 else auth.requestRedemption(id, cost, destination) { _, error -> notice = error ?: "Request submitted"; auth.loadWallet() } }; else -> ProfilePage(email, auth::signOut) } }
         BottomNav(tab) { tab = it }
     } }
-    game?.let { GameScreen(it, { game = null }) { auth.playGame(it.title.toType()) { _, error -> notice = error ?: "Coins added to your wallet"; auth.loadWallet(); game = null } } }
+    game?.let { activeGame -> GameScreen(activeGame, { game = null }) { auth.playGame(activeGame.title.toType()) { _, error -> notice = error ?: "Coins added to your wallet"; auth.loadWallet(); game = null } } }
     notice?.let { AlertDialog(onDismissRequest = { notice = null }, confirmButton = { TextButton(onClick = { notice = null }) { Text("OK", color = RedBright) } }, title = { Text("L REWARDS", color = White) }, text = { Text(it, color = RedSoft) }, containerColor = Surface) }
 }
 
@@ -122,4 +124,4 @@ private fun String.toType() = when (this) { "Daily Spin" -> "spin"; "Scratch & W
 
 @Composable private fun AppPreviewTheme(content: @Composable () -> Unit) { content() }
 
-private fun Map<String, String>.toJsonObject(): kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.buildJsonObject { forEach { (key, value) -> put(key, value) } }
+private fun Map<String, String>.toJsonObject(): kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.buildJsonObject { forEach { (key, value) -> put(key, kotlinx.serialization.json.JsonPrimitive(value)) } }
