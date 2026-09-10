@@ -99,7 +99,9 @@ export async function POST(request: Request) {
     const note = typeof body.note === 'string' ? body.note.trim().slice(0, 500) : ''
     if (!userId || !Number.isInteger(amount) || amount === 0 || Math.abs(amount) > 1000000 || !note) return NextResponse.json({ error: 'Enter a non-zero whole coin amount and note.' }, { status: 400 })
     const { error } = await client.from('balance_adjustments').insert({ user_id: userId, amount, note })
-    return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ data: { userId, amount, note } })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await client.from('admin_audit_log').insert({ admin_user_id: auth.user.id, target_user_id: userId, action: 'adjust_balance', details: { amount, note } })
+    return NextResponse.json({ data: { userId, amount, note } })
   }
 
   if (body.action === 'update_reward') {

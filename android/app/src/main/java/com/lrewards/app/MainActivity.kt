@@ -397,6 +397,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
 
 @Composable
 private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json.JsonObject>, withdrawals: List<kotlinx.serialization.json.JsonObject>) {
+    val history = transactions.sortedByDescending { it["created_at"]?.toString()?.trim('"') ?: "" }
     Column {
         Text("Wallet", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
         Text("Your earnings and reward history", color = Muted)
@@ -412,7 +413,23 @@ private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json
         }
         Spacer(Modifier.height(18.dp))
         Text("REWARD HISTORY", color = Mint, fontWeight = FontWeight.Bold)
-        if (transactions.isEmpty()) Text("No earning transactions yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else transactions.take(5).forEach { transaction -> HistoryRow(transaction["game_type"]?.toString()?.trim('"')?.replaceFirstChar { it.uppercase() } ?: transaction["type"]?.toString()?.trim('"') ?: "Reward", "+${transaction["amount"] ?: transaction["coins"] ?: 0} coins", transaction["created_at"]?.toString()?.trim('"') ?: "Completed", Lime) }
+        if (history.isEmpty()) {
+            Text("No earning transactions yet", color = Muted, modifier = Modifier.padding(top = 8.dp))
+        } else {
+            history.take(20).forEach { entry ->
+                val game = entry["game_type"]?.toString()?.trim('"')
+                val note = entry["note"]?.toString()?.trim('"')
+                val title = when {
+                    !game.isNullOrBlank() -> game.replaceFirstChar { it.uppercase() }
+                    !note.isNullOrBlank() -> "Admin adjustment"
+                    else -> "Reward"
+                }
+                val amount = entry["amount"]?.toString()?.trim('"') ?: entry["coins"]?.toString()?.trim('"') ?: "0"
+                val prefix = if (amount.toIntOrNull()?.let { it >= 0 } != false) "+" else ""
+                val detail = if (!note.isNullOrBlank()) "${note} · ${entry["created_at"]?.toString()?.trim('"') ?: "Completed"}" else entry["created_at"]?.toString()?.trim('"') ?: "Completed"
+                HistoryRow(title, "$prefix$amount coins", detail, if (amount.toIntOrNull()?.let { it < 0 } == true) Color(0xFFFF9E91) else Lime)
+            }
+        }
         Spacer(Modifier.height(14.dp))
         Text("REDEMPTION HISTORY", color = Mint, fontWeight = FontWeight.Bold)
         if (withdrawals.isEmpty()) Text("No redemption requests yet", color = Muted, modifier = Modifier.padding(top = 8.dp)) else withdrawals.take(10).forEach { item -> HistoryRow(item["reward_type"]?.toString()?.trim('"') ?: item["reward"]?.toString()?.trim('"') ?: "Redemption", item["status"]?.toString()?.trim('"') ?: "pending", item["created_at"]?.toString()?.trim('"') ?: "Submitted", Color(0xFFFFB95C)) }
