@@ -4,6 +4,7 @@ import android.graphics.Paint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -79,13 +82,13 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-private val Ink = Color(0xFF07130E)
-private val Panel = Color(0xFF10251B)
-private val Panel2 = Color(0xFF183B2A)
-private val Mint = Color(0xFFB8F7CF)
-private val Green = Color(0xFF42D778)
-private val Lime = Color(0xFFB7F34A)
-private val Muted = Color(0xFF9BB5A5)
+private val Ink = Color(0xFF090A0D)
+private val Panel = Color(0xFF17181D)
+private val Panel2 = Color(0xFF25262D)
+private val Mint = Color(0xFFFFE5E8)
+private val Green = Color(0xFFFF263D)
+private val Lime = Color(0xFFFF5262)
+private val Muted = Color(0xFFAAAAB2)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -162,6 +165,9 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
     var message by remember { mutableStateOf<String?>(null) }
     val wallet by auth.wallet.collectAsState()
     val coins = wallet.balance
+    BackHandler(enabled = selectedGame != null || tab != 0) {
+        if (selectedGame != null) selectedGame = null else tab = 0
+    }
     val games = remember {
         listOf(
             Game("Spin Wheel", "Spin for a surprise", "1–10 coins", "5 today", Icons.Rounded.Casino, Lime),
@@ -191,9 +197,13 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
                 0, 1 -> EarnPage(games) { selectedGame = it }
                 2 -> WalletPage(coins, wallet.transactions, wallet.withdrawals)
                 3 -> RedeemPage(coins, wallet.rewards) { rewardId, cost, destination ->
-                    auth.requestRedemption(rewardId, cost, destination) { balance, error ->
-                        message = error ?: "${rewardId.replaceFirstChar { it.uppercase() }} redemption requested"
-                        auth.loadWallet()
+                    if (rewardId == "__back__") {
+                        tab = 0
+                    } else {
+                        auth.requestRedemption(rewardId, cost, destination) { balance, error ->
+                            message = error ?: "${rewardId.replaceFirstChar { it.uppercase() }} redemption requested"
+                            auth.loadWallet()
+                        }
                     }
                 }
                 4 -> ProfilePage(email, auth::signOut)
@@ -449,8 +459,13 @@ private fun RedeemPage(coins: Int, rewards: List<kotlinx.serialization.json.Json
         Triple("amazon", "amazon|Amazon Gift Card ₹10", 1000), Triple("amazon", "amazon|Amazon Gift Card ₹30", 3000), Triple("amazon", "amazon|Amazon Gift Card ₹50", 5000),
         Triple("google_play", "google_play|Google Play Gift Card ₹10", 1000), Triple("google_play", "google_play|Google Play Gift Card ₹30", 3000), Triple("google_play", "google_play|Google Play Gift Card ₹50", 5000)
     ) }
-    Column {
-        Text("Redeem", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+    Column(
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 96.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { onRedeem("__back__", 0, "") }) { Text("‹ Back", color = Lime, fontWeight = FontWeight.Bold) }
+            Text("Redeem", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+        }
         Text("Choose a real payout reward", color = Muted)
         Text("100 coins = ₹1", color = Lime, fontSize = 22.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 8.dp))
         Text("Your balance: $coins coins · ₹${"%.2f".format(coins / 100.0)} available value", color = Mint)
