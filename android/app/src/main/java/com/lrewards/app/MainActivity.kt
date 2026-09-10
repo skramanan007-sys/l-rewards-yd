@@ -122,16 +122,17 @@ private fun AuthForm(state: AuthState, auth: AuthViewModel) {
         cursorColor = Ink,
     )
     Box(
-        modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Ink, Color(0xFF155235)))).padding(22.dp),
+        modifier = Modifier.fillMaxSize().background(Ink).padding(22.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(70.dp).background(Brush.linearGradient(listOf(Lime, Green)), CircleShape), contentAlignment = Alignment.Center) {
-                Text("L", color = Ink, fontSize = 40.sp, fontWeight = FontWeight.Black)
-            }
-            Text("L REWARDS", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
-            Text("Earn more from every moment", color = Mint)
-            Spacer(Modifier.height(24.dp))
+        Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
+            Text("L/", color = Green, fontSize = 54.sp, fontWeight = FontWeight.Black)
+            Text("L REWARDS", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Text("PLAY. EARN. REDEEM.", color = Lime, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Spacer(Modifier.height(30.dp))
+            Text(if (signup) "Create your account" else "Welcome back", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text(if (signup) "Start earning rewards today" else "Sign in to continue earning", color = Muted)
+            Spacer(Modifier.height(18.dp))
             if (signup) {
                 OutlinedTextField(name, { name = it }, label = { Text("Display name") }, colors = fieldColors, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
@@ -178,18 +179,26 @@ private fun RewardsHome(email: String, auth: AuthViewModel) {
     }
     Surface(Modifier.fillMaxSize(), color = Ink) {
         Column(Modifier.fillMaxSize().padding(18.dp)) {
-            Text("WELCOME BACK", color = Mint, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Text(email.substringBefore("@"), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
-            Text("Your next reward is waiting", color = Muted)
-            Spacer(Modifier.height(16.dp))
-            Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(26.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column {
+                    Text("L/", color = Green, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text("GOOD TO SEE YOU", color = Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text(email.substringBefore("@"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                }
+                Box(Modifier.size(42.dp).background(Panel2, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Person, null, tint = Lime) }
+            }
+            Spacer(Modifier.height(18.dp))
+            Card(colors = CardDefaults.cardColors(containerColor = Green), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(20.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("TOTAL BALANCE", color = Mint, fontSize = 12.sp)
-                        Text("TODAY • 0/4", color = Green, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("YOUR BALANCE", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("100 COINS = ₹1", color = Ink, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     }
-                    Text("$coins", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
-                    Text("coins available", color = Mint)
+                    Text("$coins", color = Ink, fontSize = 46.sp, fontWeight = FontWeight.Black)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("COINS AVAILABLE", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("TODAY • 0/4", color = Ink, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    }
                 }
             }
             Spacer(Modifier.height(18.dp))
@@ -243,14 +252,19 @@ private fun String.toType(): String = when (this) {
 @Composable
 private fun EarnPage(games: List<Game>, onGame: (Game) -> Unit) {
     Column {
-        Text("Earn coins", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
-        Text("Complete challenges to grow your balance", color = Muted)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+            Column {
+                Text("PLAY & EARN", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                Text("Choose your challenge", color = Muted)
+            }
+            Text("VIEW ALL", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        }
         Spacer(Modifier.height(14.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(games) { game ->
-                Card(onClick = { onGame(game) }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Card(onClick = { onGame(game) }, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(50.dp).clip(CircleShape).background(game.accent.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(game.accent.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
                             Icon(game.icon, contentDescription = null, tint = game.accent, modifier = Modifier.size(27.dp))
                         }
                         Spacer(Modifier.width(14.dp))
@@ -285,10 +299,13 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
         Surface(color = Ink, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(game.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                    TextButton(onClick = onDismiss) { Text("CLOSE", color = Mint) }
+                    Column {
+                        Text("L/", color = Green, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Text(game.name.uppercase(), color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    }
+                    TextButton(onClick = onDismiss) { Text("‹ BACK", color = Lime, fontWeight = FontWeight.Black) }
                 }
-                Text(game.subtitle, color = Muted)
+                Text(game.subtitle, color = Muted, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(16.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(game.subtitle, color = Muted)
@@ -299,7 +316,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(260.dp)) {
                             Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { rotationZ = rotation.value }) {
                                 val slice = 36f
-                                val wheelColors = listOf(Lime, Green, Color(0xFF25A7A0), Color(0xFF4BA3FF), Color(0xFF8D6BFF), Color(0xFFFFB95C), Color(0xFFFF6B81), Color(0xFF42D778), Color(0xFF71C7FF), Color(0xFFD9F99D))
+                                val wheelColors = listOf(Green, Color(0xFFB51228), Color(0xFFEF4055), Color(0xFF7D0F1D), Color(0xFFFF5262), Color(0xFF530914), Color(0xFFDB1E35), Color(0xFF8E1021), Color(0xFFFF7A86), Color(0xFF64101B))
                                 wheelColors.forEachIndexed { index, color ->
                                     drawArc(color, index * slice - 90f, slice, true)
                                     val angle = Math.toRadians(index * slice - 72.0)
@@ -343,7 +360,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                             modifier = Modifier
                                 .size(230.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(Brush.linearGradient(listOf(Color(0xFF173D2A), Color(0xFF2C8B54))))
+                                .background(Color(0xFFB51228)))
                                 .pointerInput(Unit) {
                                     detectDragGestures { _, position ->
                                         if (!revealed.value) {
