@@ -4,91 +4,44 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 type Section = 'overview' | 'users' | 'transactions' | 'games' | 'rewards' | 'withdrawals'
-type Row = Record<string, any> & { status?: string; admin_note?: string | null }
-type Dashboard = { redemptions: Row[]; transactions: Row[]; rewards: Row[]; plays: Row[]; users: Row[] }
-const sections: Array<[Section, string]> = [['overview', 'Overview'], ['users', 'Users'], ['transactions', 'Transactions'], ['games', 'Game plays'], ['rewards', 'Rewards catalog'], ['withdrawals', 'Withdrawals']]
+type Row = Record<string, any>
+type Data = { users: Row[]; transactions: Row[]; plays: Row[]; redemptions: Row[]; rewards: Row[] }
+const empty: Data = { users: [], transactions: [], plays: [], redemptions: [], rewards: [] }
+const nav: Array<[Section, string]> = [['overview', 'Overview'], ['users', 'Users'], ['transactions', 'Transactions'], ['games', 'Game plays'], ['rewards', 'Rewards'], ['withdrawals', 'Withdrawals']]
 
 export default function AdminPage() {
   const [session, setSession] = useState<any>(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmNewPassword, setConfirmNewPassword] = useState('')
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>('login')
-  const [section, setSection] = useState<Section>('overview')
-  const [dashboard, setDashboard] = useState<Dashboard>({ redemptions: [], transactions: [], rewards: [], plays: [], users: [] })
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'reset'>('login')
+  const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [confirm, setConfirm] = useState(''); const [message, setMessage] = useState('')
+  const [section, setSection] = useState<Section>('overview'); const [data, setData] = useState<Data>(empty); const [loading, setLoading] = useState(false)
 
   async function load(current = session) {
     if (!current) return
     setLoading(true)
     const response = await fetch('/api/admin', { method: 'POST', headers: { authorization: `Bearer ${current.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'overview' }) })
-    const result = await response.json()
-    if (result.data) setDashboard(result.data)
-    setMessage(result.error ?? '')
-    setLoading(false)
+    const result = await response.json(); setLoading(false)
+    if (result.data) setData(result.data); if (result.error) setMessage(result.error)
   }
+  useEffect(() => { const client = supabase(); client.auth.getSession().then(({ data: value }) => { setSession(value.session); if (value.session) load(value.session) }); const listener = client.auth.onAuthStateChange((_event, value) => { setSession(value); if (value) load(value) }); return () => listener.data.subscription.unsubscribe() }, [])
 
-  useEffect(() => {
-    const client = supabase()
-    client.auth.getSession().then(({ data }) => { setSession(data.session); if (data.session) load(data.session) })
-    const onHash = () => { if (window.location.hash.includes('type=recovery')) setAuthMode('reset') }
-    onHash(); window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
-  }, [])
-
-  async function login(event: React.FormEvent) {
+  async function auth(event: React.FormEvent) {
     event.preventDefault(); setMessage('')
-    const { data, error } = await supabase().auth.signInWithPassword({ email, password })
-    if (error) return setMessage('Invalid email or password.')
-    setSession(data.session); load(data.session)
+    if (mode === 'forgot') { const { error } = await supabase().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` }); setMessage(error?.message ?? 'Check your email for a reset link.'); return }
+    if (mode === 'reset') { if (password.length < 8 || password !== confirm) return setMessage('Use matching passwords with at least 8 characters.'); const { error } = await supabase().auth.updateUser({ password }); if (error) return setMessage(error.message); setMode('login'); setMessage('Password updated. Sign in.'); return }
+    if (mode === 'signup' && password !== confirm) return setMessage('Passwords do not match.')
+    const result = mode === 'signup' ? await supabase().auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } }) : await supabase().auth.signInWithPassword({ email, password })
+    if (result.error) return setMessage(result.error.message); if (result.data.session) { setSession(result.data.session); load(result.data.session) } else setMessage('Account created. Confirm your email, then sign in.')
   }
+  async function call(body: Record<string, unknown>) { if (!session) return; const response = await fetch('/api/admin', { method: 'POST', headers: { authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify(body) }); const result = await response.json(); setMessage(result.error ?? 'Saved.'); if (!result.error) load() }
+  const current = section === 'users' ? data.users : section === 'transactions' ? data.transactions : section === 'games' ? data.plays : section === 'rewards' ? data.rewards : data.redemptions
+  const stats = useMemo(() => ({ users: data.users.length, coins: data.users.reduce((sum, user) => sum + Number(user.balance || 0), 0), pending: data.redemptions.filter((row) => row.status === 'pending').length, plays: data.plays.length }), [data])
 
-  async function signup(event: React.FormEvent) {
-    event.preventDefault(); setMessage('')
-    if (password !== confirmPassword) return setMessage('Passwords do not match.')
-    const { data, error } = await supabase().auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-          `${window.location.origin}/auth/callback`,
-        data: { role: 'admin' },
-      },
-    })
-    if (error) return setMessage(error.message)
-    if (data.session) { setSession(data.session); load(data.session) } else setMessage('Account created. Check your email to confirm, then sign in.')
-  }
+  if (!session) return <main className="auth-shell"><section className="auth-card"><p className="eyebrow">L Rewards / Operations</p><h1>{mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Reset password' : mode === 'reset' ? 'Choose a new password' : 'Admin sign in'}</h1><p className="muted">Real-time control center for the Android rewards app.</p><form onSubmit={auth}>{mode !== 'reset' && <input type="email" placeholder="Email address" value={email} onChange={(event) => setEmail(event.target.value)} required />}{mode !== 'forgot' && <input type="password" placeholder={mode === 'reset' ? 'New password' : 'Password'} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required />}{(mode === 'signup' || mode === 'reset') && <input type="password" placeholder="Confirm password" minLength={8} value={confirm} onChange={(event) => setConfirm(event.target.value)} required />}<button>{mode === 'signup' ? 'Create account' : mode === 'forgot' ? 'Email reset link' : mode === 'reset' ? 'Save new password' : 'Sign in'}</button></form><div className="auth-links"><button className="link-button" onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')}>{mode === 'signup' ? 'Back to sign in' : 'Create account'}</button><button className="link-button" onClick={() => setMode(mode === 'forgot' ? 'login' : 'forgot')}>{mode === 'forgot' ? 'Back to sign in' : 'Forgot password?'}</button></div>{message && <p className="message">{message}</p>}</section></main>
 
-  async function forgot(event: React.FormEvent) {
-    event.preventDefault(); const { error } = await supabase().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/` })
-    setMessage(error ? error.message : 'Check your email for a secure reset link.'); if (!error) setAuthMode('login')
-  }
-
-  async function reset(event: React.FormEvent) {
-    event.preventDefault(); if (newPassword.length < 8) return setMessage('Password must be at least 8 characters.')
-    if (newPassword !== confirmNewPassword) return setMessage('New passwords do not match.')
-    const { error } = await supabase().auth.updateUser({ password: newPassword })
-    if (error) return setMessage(error.message)
-    await supabase().auth.signOut(); setSession(null); setAuthMode('login'); setMessage('Password set. Sign in with your new password.')
-  }
-
-  async function update(row: Row, status: string) {
-    const note = window.prompt('Payment reference or admin note', row.admin_note ?? '')
-    if (note === null || !session) return
-    const response = await fetch('/api/admin', { method: 'POST', headers: { authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify({ action: 'update', id: row.id, status, adminNote: note }) })
-    const result = await response.json(); setMessage(result.error ?? 'Withdrawal updated.'); if (!result.error) load()
-  }
-
-  const stats = useMemo(() => ({ users: dashboard.users.length, transactions: dashboard.transactions.length, plays: dashboard.plays.length, pending: dashboard.redemptions.filter((row) => row.status === 'pending').length, paid: dashboard.redemptions.filter((row) => row.status === 'paid').length }), [dashboard])
-
-  if (!session) return <main className="auth-shell"><div className="auth-card"><p className="eyebrow">L Rewards / Control center</p><h1>{authMode === 'signup' ? 'Create admin account' : authMode === 'forgot' ? 'Reset password' : authMode === 'reset' ? 'Choose new password' : 'Admin sign in'}</h1><p className="muted">Private operations dashboard for your Android rewards app.</p>{authMode === 'reset' ? <form onSubmit={reset}><input aria-label="New password" type="password" minLength={8} placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required /><input aria-label="Confirm new password" type="password" minLength={8} placeholder="Confirm new password" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} required /><button>Save new password</button></form> : authMode === 'forgot' ? <form onSubmit={forgot}><input aria-label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /><button>Email reset link</button><button type="button" className="link-button" onClick={() => setAuthMode('login')}>Back to sign in</button></form> : <form onSubmit={authMode === 'signup' ? signup : login}><input aria-label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /><input aria-label="Password" type="password" minLength={8} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />{authMode === 'signup' && <input aria-label="Confirm password" type="password" minLength={8} placeholder="Confirm password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />}<button>{authMode === 'signup' ? 'Create account' : 'Sign in'}</button><div className="auth-links"><button type="button" className="link-button" onClick={() => setAuthMode(authMode === 'signup' ? 'login' : 'signup')}>{authMode === 'signup' ? 'Back to sign in' : 'Create admin account'}</button><button type="button" className="link-button" onClick={() => setAuthMode('forgot')}>Forgot password?</button></div></form>}{message && <p className="message">{message}</p>}</div></main>
-
-  const data = section === 'users' ? dashboard.users : section === 'transactions' ? dashboard.transactions : section === 'games' ? dashboard.plays : section === 'rewards' ? dashboard.rewards : dashboard.redemptions
-  return <main className="app-shell"><aside><div className="brand"><span className="brand-mark">L</span><div><strong>L Rewards</strong><small>Admin control center</small></div></div><nav>{sections.map(([key, label]) => <button key={key} className={section === key ? 'active' : ''} onClick={() => setSection(key)}>{label}</button>)}</nav><button className="signout" onClick={async () => { await supabase().auth.signOut(); setSession(null) }}>Sign out</button></aside><section className="workspace"><header className="topbar"><div><p className="eyebrow">Operations</p><h1>{sections.find(([key]) => key === section)?.[1]}</h1></div><button className="secondary" onClick={() => load()}>{loading ? 'Refreshing…' : 'Refresh data'}</button></header>{section === 'overview' ? <><div className="stats">{[['Total users', stats.users], ['Transactions', stats.transactions], ['Game plays', stats.plays], ['Pending withdrawals', stats.pending], ['Paid withdrawals', stats.paid]].map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><div className="panel-grid"><section className="panel"><h2>Recent withdrawals</h2><Table rows={dashboard.redemptions.slice(0, 8)} fields={['reward', 'status', 'created_at']} /></section><section className="panel"><h2>Recent activity</h2><Table rows={dashboard.transactions.slice(0, 8)} fields={['user_id', 'amount', 'created_at']} /></section></div></> : <section className="panel"><div className="panel-heading"><div><h2>{sections.find(([key]) => key === section)?.[1]}</h2><p className="muted">Live data from the Android app through Supabase.</p></div><span className="count">{data.length} records</span></div>{section === 'withdrawals' ? <Table rows={data} fields={['reward', 'cost', 'destination', 'status', 'created_at']} action={update} /> : <Table rows={data} fields={Object.keys(data[0] ?? {}).filter((key) => !['id', 'user'].includes(key)).slice(0, 6)} />}</section>}{message && <p className="message">{message}</p>}</section></main>
+  return <main className="app-shell"><aside><div className="brand"><span className="brand-mark">L</span><div><strong>L Rewards</strong><small>Live control center</small></div></div><nav>{nav.map(([key, label]) => <button key={key} className={section === key ? 'active' : ''} onClick={() => setSection(key)}>{label}</button>)}</nav><button className="signout" onClick={() => supabase().auth.signOut()}>Sign out</button></aside><section className="workspace"><header className="topbar"><div><p className="eyebrow">Supabase live data</p><h1>{nav.find(([key]) => key === section)?.[1]}</h1></div><button className="secondary" onClick={() => load()}>{loading ? 'Refreshing…' : 'Refresh'}</button></header>{section === 'overview' ? <><div className="stats"><Metric label="Users" value={stats.users} /><Metric label="Coins in circulation" value={stats.coins} /><Metric label="Pending withdrawals" value={stats.pending} /><Metric label="Game plays" value={stats.plays} /></div><div className="panel-grid"><Panel title="Latest withdrawals"><Table rows={data.redemptions.slice(0, 8)} fields={['user_email', 'reward', 'cost', 'status']} /></Panel><Panel title="Latest activity"><Table rows={data.transactions.slice(0, 8)} fields={['user_email', 'game_type', 'amount', 'created_at']} /></Panel></div></> : <Panel title={`${nav.find(([key]) => key === section)?.[1]} · ${current.length} live records`}>{section === 'users' && <UserTable rows={current} onAdjust={(user) => { const amount = Number(window.prompt(`Coin adjustment for ${user.email}. Use negative to remove coins.`)); const note = window.prompt('Reason for this adjustment'); if (Number.isInteger(amount) && note) call({ action: 'adjust_balance', userId: user.id, amount, note }) }} />}{section === 'withdrawals' && <WithdrawalTable rows={current} onUpdate={(row, status) => { const note = window.prompt('Admin note or payment reference', row.admin_note ?? ''); if (note !== null) call({ action: 'update_withdrawal', id: row.id, status, adminNote: note }) }} />}{section === 'rewards' && <Table rows={current} fields={['label', 'type', 'cost', 'active']} action={(row) => call({ action: 'update_reward', id: row.id, active: !row.active })} actionLabel="Toggle active" />}{(section === 'transactions' || section === 'games') && <Table rows={current} fields={section === 'games' ? ['user_email', 'game_type', 'reward_amount', 'created_at'] : ['user_email', 'game_type', 'amount', 'created_at']} />}</Panel>}{message && <p className="message">{message}</p>}</section></main>
 }
-
-function Table({ rows, fields, action }: { rows: Row[]; fields: string[]; action?: (row: Row, status: string) => void }) { return <div className="table-wrap"><table><thead><tr>{fields.map((field) => <th key={field}>{field.replaceAll('_', ' ')}</th>)}{action && <th>Actions</th>}</tr></thead><tbody>{rows.map((row, index) => <tr key={row.id ?? index}>{fields.map((field) => <td key={field}>{field === 'created_at' && row[field] ? new Date(row[field]).toLocaleString() : String(row[field] ?? '—')}</td>)}{action && <td><div className="actions"><button onClick={() => action(row, 'approved')}>Approve</button><button onClick={() => action(row, 'paid')}>Mark paid</button><button onClick={() => action(row, 'rejected')}>Reject</button></div></td>}</tr>)}</tbody></table>{!rows.length && <p className="empty">No records found.</p>}</div> }
+function Metric({ label, value }: { label: string; value: number }) { return <article className="metric"><span>{label}</span><strong>{value.toLocaleString()}</strong></article> }
+function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="panel"><div className="panel-heading"><h2>{title}</h2></div>{children}</section> }
+function Table({ rows, fields, action, actionLabel = 'Action' }: { rows: Row[]; fields: string[]; action?: (row: Row) => void; actionLabel?: string }) { return <div className="table-wrap"><table><thead><tr>{fields.map((field) => <th key={field}>{field.replaceAll('_', ' ')}</th>)}{action && <th>{actionLabel}</th>}</tr></thead><tbody>{rows.map((row, index) => <tr key={row.id ?? index}>{fields.map((field) => <td key={field}>{field === 'created_at' ? new Date(row[field]).toLocaleString() : String(row[field] ?? '—')}</td>)}{action && <td><button className="table-action" onClick={() => action(row)}>{actionLabel}</button></td>}</tr>)}</tbody></table>{!rows.length && <p className="empty">No live records found.</p>}</div> }
+function UserTable({ rows, onAdjust }: { rows: Row[]; onAdjust: (row: Row) => void }) { return <Table rows={rows} fields={['email', 'balance', 'transactions', 'plays', 'redemptions', 'confirmed']} action={onAdjust} actionLabel="Adjust coins" /> }
+function WithdrawalTable({ rows, onUpdate }: { rows: Row[]; onUpdate: (row: Row, status: string) => void }) { return <Table rows={rows} fields={['user_email', 'reward', 'cost', 'destination', 'status', 'admin_note']} action={(row) => onUpdate(row, row.status === 'pending' ? 'approved' : row.status === 'approved' ? 'paid' : 'rejected')} actionLabel="Advance status" /> }

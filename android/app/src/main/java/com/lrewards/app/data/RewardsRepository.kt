@@ -54,6 +54,9 @@ class RewardsRepository {
     suspend fun rewardTransactions(): List<JsonObject> =
         supabase.postgrest.from("transactions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
 
+    suspend fun balanceAdjustments(): List<JsonObject> =
+        supabase.postgrest.from("balance_adjustments").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
+
     suspend fun withdrawalHistory(): List<JsonObject> =
         supabase.postgrest.from("redemptions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
 
