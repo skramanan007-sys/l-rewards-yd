@@ -28,28 +28,60 @@ export async function POST(request: Request) {
   const body = await readJson(request)
 
   if (body.action === 'overview') {
-    const [redemptionsResult, transactionsResult, adjustmentsResult, rewardsResult, playsResult, usersResult] = await Promise.all([
+    const [redemptionsResult, transactionsResult, adjustmentsResult, rewardsResult, playsResult, controlsResult, cardsResult, usersResult] = await Promise.all([
       client.from('redemptions').select('id,user_id,reward,cost,destination,status,admin_note,created_at').order('created_at', { ascending: false }).limit(500),
       client.from('transactions').select('id,user_id,game_type,amount,created_at').order('created_at', { ascending: false }).limit(500),
       client.from('balance_adjustments').select('id,user_id,amount,note,created_at').order('created_at', { ascending: false }).limit(500),
       client.from('rewards').select('id,type,label,cost,description,active,created_at').order('type').order('cost'),
       client.from('game_plays').select('id,user_id,game_type,reward_amount,created_at').order('created_at', { ascending: false }).limit(500),
+      client.from('user_controls').select('user_id,banned,ban_reason,updated_at'),
+      client.from('gift_cards').select('id,code,provider,value,assigned_user_id,status,note,created_at,redeemed_at').order('created_at', { ascending: false }).limit(500),
       client.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     ])
-    const errors = [redemptionsResult.error, transactionsResult.error, adjustmentsResult.error, rewardsResult.error, playsResult.error, usersResult.error].filter(Boolean)
+    const errors = [redemptionsResult.error, transactionsResult.error, adjustmentsResult.error, rewardsResult.error, playsResult.error, controlsResult.error, cardsResult.error, usersResult.error].filter(Boolean)
     if (errors.length) return NextResponse.json({ error: errors[0]?.message }, { status: 500 })
     const users = usersResult.data.users
+    const controls = controlsResult.data ?? []
+    const controlMap = new Map(controls.map((control) => [control.user_id, control]))
     const transactions = transactionsResult.data ?? []
     const adjustments = adjustmentsResult.data ?? []
     const redemptions = redemptionsResult.data ?? []
     const plays = playsResult.data ?? []
-    const userMap = new Map(users.map((user) => [user.id, { id: user.id, email: user.email ?? 'Unknown', created_at: user.created_at, last_sign_in_at: user.last_sign_in_at, confirmed: Boolean(user.email_confirmed_at), balance: 0, transactions: 0, plays: 0, redemptions: 0 }]))
+    const userMap = new Map(users.map((user) => { const control = controlMap.get(user.id); return [user.id, { id: user.id, email: user.email ?? 'Unknown', created_at: user.created_at, last_sign_in_at: user.last_sign_in_at, confirmed: Boolean(user.email_confirmed_at), balance: 0, transactions: 0, plays: 0, redemptions: 0, banned: Boolean(control?.banned), ban_reason: control?.ban_reason ?? null }] }))
     for (const row of transactions) { const user = userMap.get(row.user_id); if (user) { user.balance += Number(row.amount); user.transactions += 1 } }
     for (const row of adjustments) { const user = userMap.get(row.user_id); if (user) user.balance += Number(row.amount) }
     for (const row of redemptions) { const user = userMap.get(row.user_id); if (user) { if (row.status !== 'rejected') user.balance -= Number(row.cost); user.redemptions += 1 } }
     for (const row of plays) { const user = userMap.get(row.user_id); if (user) user.plays += 1 }
     const decorate = (row: { user_id: string }) => ({ ...row, user_email: userMap.get(row.user_id)?.email ?? 'Unknown user' })
-    return NextResponse.json({ data: { users: [...userMap.values()].map((user) => ({ ...user, balance: Math.max(user.balance, 0) })), transactions: transactions.map(decorate), plays: plays.map(decorate), redemptions: redemptions.map(decorate), rewards: rewardsResult.data ?? [] } })
+    return NextResponse.json({ data: { users: [...userMap.values()].map((user) => ({ ...user, balance: Math.max(user.balance, 0) })), transactions: transactions.map(decorate), plays: plays.map(decorate), redemptions: redemptions.map(decorate), rewards: rewardsResult.data ?? [], giftCards: cardsResult.data ?? [] } })
+  }
+
+  if (body.action === 'set_user_control') {
+    const userId = typeof body.userId === 'string' ? body.userId : ''
+    const banned = body.banned === true
+    const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 500) : null
+    if (!userId) return NextResponse.json({ error: 'Invalid user' }, { status: 400 })
+    const { error } = await client.from('user_controls').upsert({ user_id: userId, banned, ban_reason: banned ? reason : null, updated_at: new Date().toISOString() })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await client.from('admin_audit_log').insert({ admin_user_id: auth.user.id, target_user_id: userId, action: banned ? 'ban_user' : 'unban_user', details: { reason } })
+    return NextResponse.json({ data: { userId, banned } })
+  }
+
+  if (body.action === 'create_gift_card') {
+    const code = typeof body.code === 'string' ? body.code.trim().slice(0, 100) : ''
+    const provider = typeof body.provider === 'string' ? body.provider.trim().slice(0, 40) : ''
+    const value = Number(body.value)
+    if (!code || !provider || !Number.isInteger(value) || value <= 0) return NextResponse.json({ error: 'Enter a code, provider, and positive value.' }, { status: 400 })
+    const { data, error } = await client.from('gift_cards').insert({ code, provider, value, note: typeof body.note === 'string' ? body.note.trim().slice(0, 500) : null }).select().single()
+    return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ data })
+  }
+
+  if (body.action === 'assign_gift_card') {
+    const id = typeof body.id === 'string' ? body.id : ''
+    const userId = typeof body.userId === 'string' ? body.userId : ''
+    if (!id || !userId) return NextResponse.json({ error: 'Select a card and user.' }, { status: 400 })
+    const { data, error } = await client.from('gift_cards').update({ assigned_user_id: userId, status: 'assigned' }).eq('id', id).eq('status', 'available').select().single()
+    return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ data })
   }
 
   if (body.action === 'update_withdrawal') {
