@@ -108,8 +108,9 @@ class AuthViewModel(
             .onSuccess { result ->
                 val balance = result["balance"]?.toString()?.trim('"')?.toIntOrNull()
                 if (balance != null) _wallet.value = _wallet.value.copy(balance = balance)
+                loadWallet()
                 onComplete(balance, null)
             }
-            .onFailure { error -> onComplete(null, "Unable to request redemption") }
+            .onFailure { error -> onComplete(null, error.message?.substringAfterLast("message=")?.takeIf { it.isNotBlank() } ?: "Unable to request redemption") }
     }
 }

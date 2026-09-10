@@ -440,12 +440,15 @@ private fun WalletPage(coins: Int, transactions: List<kotlinx.serialization.json
 private fun RedeemPage(coins: Int, rewards: List<kotlinx.serialization.json.JsonObject>, onRedeem: (String, Int, String) -> Unit) {
     var destination by remember { mutableStateOf("") }
     val options = rewards.mapNotNull { reward ->
-        val id = reward["id"]?.toString()?.trim('"') ?: return@mapNotNull null
         val type = reward["type"]?.toString()?.trim('"') ?: return@mapNotNull null
-        val name = reward["name"]?.toString()?.trim('"') ?: type
+        val name = reward["label"]?.toString()?.trim('"') ?: reward["name"]?.toString()?.trim('"') ?: type
         val cost = reward["cost"]?.toString()?.trim('"')?.toIntOrNull() ?: return@mapNotNull null
-        Triple(id, "$type|$name", cost)
-    }.ifEmpty { listOf(Triple("upi", "upi|UPI Cash", 1000), Triple("amazon", "amazon|Amazon Gift Card", 1000), Triple("google_play", "google_play|Google Play Gift Card", 1000)) }
+        Triple(type, "$type|$name", cost)
+    }.ifEmpty { listOf(
+        Triple("upi", "upi|UPI Cash ₹10", 1000), Triple("upi", "upi|UPI Cash ₹30", 3000), Triple("upi", "upi|UPI Cash ₹50", 5000),
+        Triple("amazon", "amazon|Amazon Gift Card ₹10", 1000), Triple("amazon", "amazon|Amazon Gift Card ₹30", 3000), Triple("amazon", "amazon|Amazon Gift Card ₹50", 5000),
+        Triple("google_play", "google_play|Google Play Gift Card ₹10", 1000), Triple("google_play", "google_play|Google Play Gift Card ₹30", 3000), Triple("google_play", "google_play|Google Play Gift Card ₹50", 5000)
+    )
     Column {
         Text("Redeem", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
         Text("Choose a real payout reward", color = Muted)
