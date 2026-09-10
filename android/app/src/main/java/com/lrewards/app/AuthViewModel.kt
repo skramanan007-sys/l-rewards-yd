@@ -40,11 +40,16 @@ class AuthViewModel(
 
     fun loadWallet() = viewModelScope.launch {
         _wallet.value = WalletState(loading = true)
-        runCatching { Triple(repository.rewardTransactions(), repository.withdrawalHistory(), repository.rewardCatalog()) }
-            .onSuccess { (transactions, withdrawals, rewards) ->
+        runCatching { listOf(repository.rewardTransactions(), repository.balanceAdjustments(), repository.withdrawalHistory(), repository.rewardCatalog()) }
+            .onSuccess { values ->
+                val transactions = values[0]
+                val adjustments = values[1]
+                val withdrawals = values[2]
+                val rewards = values[3]
                 val earned = transactions.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: it["coins"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
+                val adjusted = adjustments.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
                 val spent = withdrawals.filter { it["status"]?.toString()?.trim('"') != "rejected" }.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: it["cost"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
-                _wallet.value = WalletState(transactions, withdrawals, rewards, (earned - spent).coerceAtLeast(0))
+                _wallet.value = WalletState(transactions + adjustments, withdrawals, rewards, (earned + adjusted - spent).coerceAtLeast(0))
             }
             .onFailure { _wallet.value = WalletState(error = "Unable to load wallet history") }
     }

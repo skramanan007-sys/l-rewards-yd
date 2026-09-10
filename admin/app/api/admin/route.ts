@@ -32,21 +32,24 @@ export async function POST(request: Request) {
   const body = await readJson(request)
 
   if (body.action === 'overview') {
-    const [redemptionsResult, transactionsResult, rewardsResult, playsResult, usersResult] = await Promise.all([
+    const [redemptionsResult, transactionsResult, adjustmentsResult, rewardsResult, playsResult, usersResult] = await Promise.all([
       client.from('redemptions').select('id,user_id,reward,cost,destination,status,admin_note,created_at').order('created_at', { ascending: false }).limit(500),
       client.from('transactions').select('id,user_id,game_type,amount,created_at').order('created_at', { ascending: false }).limit(500),
+      client.from('balance_adjustments').select('id,user_id,amount,note,created_at').order('created_at', { ascending: false }).limit(500),
       client.from('rewards').select('id,type,label,cost,description,active,created_at').order('type').order('cost'),
       client.from('game_plays').select('id,user_id,game_type,reward_amount,created_at').order('created_at', { ascending: false }).limit(500),
       client.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     ])
-    const errors = [redemptionsResult.error, transactionsResult.error, rewardsResult.error, playsResult.error, usersResult.error].filter(Boolean)
+    const errors = [redemptionsResult.error, transactionsResult.error, adjustmentsResult.error, rewardsResult.error, playsResult.error, usersResult.error].filter(Boolean)
     if (errors.length) return NextResponse.json({ error: errors[0]?.message }, { status: 500 })
     const users = usersResult.data.users
     const transactions = transactionsResult.data ?? []
+    const adjustments = adjustmentsResult.data ?? []
     const redemptions = redemptionsResult.data ?? []
     const plays = playsResult.data ?? []
     const userMap = new Map(users.map((user) => [user.id, { id: user.id, email: user.email ?? 'Unknown', created_at: user.created_at, last_sign_in_at: user.last_sign_in_at, confirmed: Boolean(user.email_confirmed_at), balance: 0, transactions: 0, plays: 0, redemptions: 0 }]))
     for (const row of transactions) { const user = userMap.get(row.user_id); if (user) { user.balance += Number(row.amount); user.transactions += 1 } }
+    for (const row of adjustments) { const user = userMap.get(row.user_id); if (user) user.balance += Number(row.amount) }
     for (const row of redemptions) { const user = userMap.get(row.user_id); if (user) { if (row.status !== 'rejected') user.balance -= Number(row.cost); user.redemptions += 1 } }
     for (const row of plays) { const user = userMap.get(row.user_id); if (user) user.plays += 1 }
     const decorate = (row: { user_id: string }) => ({ ...row, user_email: userMap.get(row.user_id)?.email ?? 'Unknown user' })
@@ -67,7 +70,7 @@ export async function POST(request: Request) {
     const amount = Number(body.amount)
     const note = typeof body.note === 'string' ? body.note.trim().slice(0, 500) : ''
     if (!userId || !Number.isInteger(amount) || amount === 0 || Math.abs(amount) > 1000000 || !note) return NextResponse.json({ error: 'Enter a non-zero whole coin amount and note.' }, { status: 400 })
-    const { error } = await client.from('transactions').insert({ user_id: userId, game_type: 'admin_adjustment', amount })
+    const { error } = await client.from('balance_adjustments').insert({ user_id: userId, amount, note })
     return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ data: { userId, amount, note } })
   }
 
