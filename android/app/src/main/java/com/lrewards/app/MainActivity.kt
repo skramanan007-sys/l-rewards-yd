@@ -448,7 +448,7 @@ private fun RedeemPage(coins: Int, rewards: List<kotlinx.serialization.json.Json
         Triple("upi", "upi|UPI Cash ₹10", 1000), Triple("upi", "upi|UPI Cash ₹30", 3000), Triple("upi", "upi|UPI Cash ₹50", 5000),
         Triple("amazon", "amazon|Amazon Gift Card ₹10", 1000), Triple("amazon", "amazon|Amazon Gift Card ₹30", 3000), Triple("amazon", "amazon|Amazon Gift Card ₹50", 5000),
         Triple("google_play", "google_play|Google Play Gift Card ₹10", 1000), Triple("google_play", "google_play|Google Play Gift Card ₹30", 3000), Triple("google_play", "google_play|Google Play Gift Card ₹50", 5000)
-    )
+    ) }
     Column {
         Text("Redeem", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
         Text("Choose a real payout reward", color = Muted)
@@ -462,6 +462,10 @@ private fun RedeemPage(coins: Int, rewards: List<kotlinx.serialization.json.Json
                 val label = descriptor.substringAfter('|')
                 Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(42.dp).background(Green.copy(alpha = .18f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                            Text(when (type) { "upi" -> "UPI"; "amazon" -> "a"; "google_play" -> "GP"; else -> "L" }, color = Lime, fontWeight = FontWeight.Black)
+                        }
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) { Text(label, color = Color.White, fontWeight = FontWeight.Bold); Text("$cost coins · ₹${cost / 100}", color = Muted, fontSize = 12.sp) }
                         Button(enabled = coins >= cost && destination.trim().length >= 3, onClick = { onRedeem(id, cost, destination.trim()) }, colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (coins >= cost) "REQUEST" else "NEED MORE") }
                     }
