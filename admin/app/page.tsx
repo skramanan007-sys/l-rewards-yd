@@ -21,6 +21,9 @@ export default function AdminPage() {
   const [session, setSession] = useState<any>(null)
   const [email, setEmail] = useState('sramanan602@gmail.com')
   const [password, setPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [forgotMode, setForgotMode] = useState(false)
+  const [resetMode, setResetMode] = useState(false)
   const [rows, setRows] = useState<Row[]>([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -41,10 +44,15 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    supabase().auth.getSession().then(({ data }) => {
+    const client = supabase()
+    client.auth.getSession().then(({ data }) => {
       setSession(data.session)
       if (data.session) refresh(data.session)
     })
+    const handleRecovery = () => setResetMode(window.location.hash.includes('type=recovery'))
+    handleRecovery()
+    window.addEventListener('hashchange', handleRecovery)
+    return () => window.removeEventListener('hashchange', handleRecovery)
   }, [])
 
   async function signIn(event: React.FormEvent) {
@@ -58,6 +66,30 @@ export default function AdminPage() {
     }
     setSession(data.session)
     refresh(data.session)
+  }
+
+  async function requestReset(event: React.FormEvent) {
+    event.preventDefault()
+    setMessage('')
+    const { error } = await supabase().auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
+    if (error) return setMessage('Unable to send the reset email. Please try again.')
+    setMessage('Check your email for a password reset link.')
+    setForgotMode(false)
+  }
+
+  async function updatePassword(event: React.FormEvent) {
+    event.preventDefault()
+    if (newPassword.length < 8) return setMessage('Password must be at least 8 characters.')
+    const { error } = await supabase().auth.updateUser({ password: newPassword })
+    if (error) return setMessage('Unable to update the password. Please request a new reset link.')
+    setResetMode(false)
+    setPassword('')
+    setNewPassword('')
+    setMessage('Password updated. You can now sign in.')
+    await supabase().auth.signOut()
+    setSession(null)
   }
 
   async function update(row: Row, status: Row['status']) {
@@ -89,13 +121,27 @@ export default function AdminPage() {
     <main className="min-h-screen px-6 py-12">
       <div className="mx-auto max-w-md rounded-3xl border border-[var(--line)] bg-[var(--panel)] p-8 shadow-2xl">
         <p className="text-sm uppercase tracking-[0.22em] text-[var(--accent)]">L Rewards / Operations</p>
-        <h1 className="mt-3 text-3xl font-semibold">Admin sign in</h1>
-        <p className="mt-3 leading-6 text-[var(--muted)]">Private console for reviewing manual gift-card and UPI withdrawals.</p>
-        <form onSubmit={signIn} className="mt-8 flex flex-col gap-4">
-          <input aria-label="Email" value={email} onChange={(event) => setEmail(event.target.value)} className="rounded-xl border border-[var(--line)] bg-[var(--field)] px-4 py-3" type="email" required />
-          <input aria-label="Password" value={password} onChange={(event) => setPassword(event.target.value)} className="rounded-xl border border-[var(--line)] bg-[var(--field)] px-4 py-3" type="password" placeholder="Password" required />
-          <button className="rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-[var(--ink)]">Sign in</button>
-        </form>
+        <h1 className="mt-3 text-3xl font-semibold">{resetMode ? 'Create a new password' : forgotMode ? 'Reset your password' : 'Admin sign in'}</h1>
+        <p className="mt-3 leading-6 text-[var(--muted)]">{resetMode ? 'Choose a new password for your admin account.' : forgotMode ? 'We will email a secure password reset link.' : 'Private console for reviewing manual gift-card and UPI withdrawals.'}</p>
+        {resetMode ? (
+          <form onSubmit={updatePassword} className="mt-8 flex flex-col gap-4">
+            <input aria-label="New password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="rounded-xl border border-[var(--line)] bg-[var(--field)] px-4 py-3" type="password" placeholder="New password" minLength={8} required />
+            <button className="rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-[var(--ink)]">Update password</button>
+          </form>
+        ) : forgotMode ? (
+          <form onSubmit={requestReset} className="mt-8 flex flex-col gap-4">
+            <input aria-label="Email" value={email} onChange={(event) => setEmail(event.target.value)} className="rounded-xl border border-[var(--line)] bg-[var(--field)] px-4 py-3" type="email" required />
+            <button className="rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-[var(--ink)]">Email reset link</button>
+            <button type="button" onClick={() => setForgotMode(false)} className="text-sm text-[var(--muted)]">Back to sign in</button>
+          </form>
+        ) : (
+          <form onSubmit={signIn} className="mt-8 flex flex-col gap-4">
+            <input aria-label="Email" value={email} onChange={(event) => setEmail(event.target.value)} className="rounded-xl border border-[var(--line)] bg-[var(--field)] px-4 py-3" type="email" required />
+            <input aria-label="Password" value={password} onChange={(event) => setPassword(event.target.value)} className="rounded-xl border border-[var(--line)] bg-[var(--field)] px-4 py-3" type="password" placeholder="Password" required />
+            <button className="rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-[var(--ink)]">Sign in</button>
+            <button type="button" onClick={() => setForgotMode(true)} className="text-sm text-[var(--muted)]">Forgot password?</button>
+          </form>
+        )}
         {message && <p className="mt-4 text-sm text-[var(--warn)]">{message}</p>}
       </div>
     </main>
