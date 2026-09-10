@@ -360,7 +360,7 @@ private fun GameExperience(game: Game, onDismiss: () -> Unit, onReward: (Int) ->
                             modifier = Modifier
                                 .size(230.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(Color(0xFFB51228)))
+                                .background(Color(0xFFB51228))
                                 .pointerInput(Unit) {
                                     detectDragGestures { _, position ->
                                         if (!revealed.value) {
