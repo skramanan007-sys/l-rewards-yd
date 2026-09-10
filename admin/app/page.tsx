@@ -5,8 +5,8 @@ import { supabase } from '../lib/supabase'
 
 type Section = 'overview' | 'users' | 'transactions' | 'games' | 'rewards' | 'withdrawals'
 type Row = Record<string, any>
-type Data = { users: Row[]; transactions: Row[]; plays: Row[]; redemptions: Row[]; rewards: Row[] }
-const empty: Data = { users: [], transactions: [], plays: [], redemptions: [], rewards: [] }
+type Data = { users: Row[]; transactions: Row[]; plays: Row[]; redemptions: Row[]; rewards: Row[]; giftCards: Row[] }
+const empty: Data = { users: [], transactions: [], plays: [], redemptions: [], rewards: [], giftCards: [] }
 const nav: Array<[Section, string]> = [['overview', 'Overview'], ['users', 'Users'], ['transactions', 'Transactions'], ['games', 'Game plays'], ['rewards', 'Rewards'], ['withdrawals', 'Withdrawals']]
 
 export default function AdminPage() {

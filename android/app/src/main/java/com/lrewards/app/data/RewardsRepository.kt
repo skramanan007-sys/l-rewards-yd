@@ -16,6 +16,13 @@ class RewardsRepository {
             this.email = email
             this.password = password
         }
+        val control = supabase.postgrest.from("user_controls").select {
+            filter { eq("user_id", supabase.auth.currentUserOrNull()?.id.orEmpty()) }
+        }.decodeList<JsonObject>().firstOrNull()
+        if (control?.get("banned")?.toString()?.trim('"') == "true") {
+            supabase.auth.signOut()
+            throw IllegalStateException("This account is banned")
+        }
     }
 
     suspend fun signUp(email: String, password: String, displayName: String) {
