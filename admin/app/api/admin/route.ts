@@ -2,14 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient, type User } from '@supabase/supabase-js'
 
 function getAdminClient() {
-  const url = process.env.SUPABASE_URL_2
-  const key = process.env.SUPABASE_SECRET_KEY_2
+  const url = process.env.SUPABASE_URL ?? process.env.SUPABASE_URL_2
+  const key = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SECRET_KEY_2 ?? process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Supabase admin environment is not configured')
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
-
-function allowedEmails() {
-  return (process.env.ADMIN_EMAILS ?? 'sramanan602@gmail.com').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
 }
 
 async function requireAdmin(request: Request): Promise<{ client: ReturnType<typeof getAdminClient>; user: User } | null> {
@@ -17,7 +13,7 @@ async function requireAdmin(request: Request): Promise<{ client: ReturnType<type
   if (!token) return null
   const client = getAdminClient()
   const { data, error } = await client.auth.getUser(token)
-  if (error || !data.user || !allowedEmails().includes(data.user.email?.toLowerCase() ?? '')) return null
+  if (error || !data.user) return null
   return { client, user: data.user }
 }
 
