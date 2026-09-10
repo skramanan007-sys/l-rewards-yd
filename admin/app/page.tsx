@@ -49,7 +49,16 @@ export default function AdminPage() {
   async function signup(event: React.FormEvent) {
     event.preventDefault(); setMessage('')
     if (email.toLowerCase() !== allowedEmail) return setMessage(`Signup is restricted to ${allowedEmail}.`)
-    const { data, error } = await supabase().auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } })
+    const { data, error } = await supabase().auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+          `${window.location.origin}/auth/callback`,
+        data: { role: 'admin' },
+      },
+    })
     if (error) return setMessage(error.message)
     if (data.session) { setSession(data.session); load(data.session) } else setMessage('Account created. Check your email to confirm, then sign in.')
   }
