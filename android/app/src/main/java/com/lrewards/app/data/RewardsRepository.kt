@@ -58,6 +58,9 @@ class RewardsRepository {
             },
         ).decodeAs()
 
+    suspend fun wallet(): JsonObject =
+        supabase.postgrest.rpc("get_my_wallet").decodeAs()
+
     suspend fun rewardTransactions(): List<JsonObject> =
         supabase.postgrest.from("transactions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
 

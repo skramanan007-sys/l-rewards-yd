@@ -6,6 +6,9 @@ import com.lrewards.app.data.RewardsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 
 data class AuthState(
     val loading: Boolean = false,
@@ -40,16 +43,16 @@ class AuthViewModel(
 
     fun loadWallet() = viewModelScope.launch {
         _wallet.value = WalletState(loading = true)
-        runCatching { listOf(repository.rewardTransactions(), repository.balanceAdjustments(), repository.withdrawalHistory(), repository.rewardCatalog()) }
-            .onSuccess { values ->
-                val transactions = values[0]
-                val adjustments = values[1]
-                val withdrawals = values[2]
-                val rewards = values[3]
-                val earned = transactions.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: it["coins"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
-                val adjusted = adjustments.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
-                val spent = withdrawals.filter { it["status"]?.toString()?.trim('"') != "rejected" }.sumOf { it["amount"]?.toString()?.trim('"')?.toIntOrNull() ?: it["cost"]?.toString()?.trim('"')?.toIntOrNull() ?: 0 }
-                _wallet.value = WalletState(transactions + adjustments, withdrawals, rewards, (earned + adjusted - spent).coerceAtLeast(0))
+        runCatching {
+            val wallet = repository.wallet()
+            val withdrawals = repository.withdrawalHistory()
+            val rewards = repository.rewardCatalog()
+            Triple(wallet, withdrawals, rewards)
+        }
+            .onSuccess { (wallet, withdrawals, rewards) ->
+                val transactions = wallet["transactions"]?.jsonArray?.mapNotNull { it as? JsonObject }.orEmpty()
+                val balance = wallet["balance"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                _wallet.value = WalletState(transactions, withdrawals, rewards, balance)
             }
             .onFailure { _wallet.value = WalletState(error = "Unable to load wallet history") }
     }
