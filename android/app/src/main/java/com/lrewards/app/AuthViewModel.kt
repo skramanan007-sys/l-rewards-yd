@@ -90,8 +90,8 @@ class AuthViewModel(
         _state.value = AuthState()
     }
 
-    fun playGame(gameType: String, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
-        runCatching { repository.playGame(gameType) }
+    fun playGame(gameType: String, selectedReward: Int? = null, onComplete: (Int?, String?) -> Unit) = viewModelScope.launch {
+        runCatching { repository.playGame(gameType, selectedReward?.toString()) }
             .onSuccess { result ->
                 val balance = result["balance"]?.toString()?.trim('"')?.toIntOrNull()
                 if (balance != null) _wallet.value = _wallet.value.copy(balance = balance)
