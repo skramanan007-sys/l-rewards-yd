@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
-    <application android:theme="@style/Theme.LRewards" android:label="L Rewards" android:allowBackup="false" android:supportsRtl="true">
+    <application android:theme="@style/Theme.LRewards" android:label="L Rewards" android:icon="@drawable/l_rewards_logo" android:roundIcon="@drawable/l_rewards_logo" android:allowBackup="false" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
