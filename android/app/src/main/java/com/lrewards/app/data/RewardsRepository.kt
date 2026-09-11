@@ -70,6 +70,9 @@ class RewardsRepository {
     suspend fun withdrawalHistory(): List<JsonObject> =
         supabase.postgrest.from("redemptions").select { order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
 
+    suspend fun myGiftCards(): List<JsonObject> =
+        supabase.postgrest.from("gift_cards").select { filter { eq("assigned_user_id", supabase.auth.currentUserOrNull()?.id.orEmpty()) }; order("created_at", Order.DESCENDING) }.decodeList<JsonObject>()
+
     suspend fun rewardCatalog(): List<JsonObject> =
         supabase.postgrest.from("rewards").select { order("type", Order.ASCENDING); order("cost", Order.ASCENDING) }.decodeList<JsonObject>()
 

@@ -20,6 +20,7 @@ data class AuthState(
 data class WalletState(
     val transactions: List<kotlinx.serialization.json.JsonObject> = emptyList(),
     val withdrawals: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    val giftCards: List<kotlinx.serialization.json.JsonObject> = emptyList(),
     val rewards: List<kotlinx.serialization.json.JsonObject> = emptyList(),
     val balance: Int = 0,
     val loading: Boolean = false,
@@ -47,12 +48,17 @@ class AuthViewModel(
             val wallet = repository.wallet()
             val withdrawals = repository.withdrawalHistory()
             val rewards = repository.rewardCatalog()
-            Triple(wallet, withdrawals, rewards)
+            val giftCards = repository.myGiftCards()
+            listOf(wallet, withdrawals, rewards, giftCards)
         }
-            .onSuccess { (wallet, withdrawals, rewards) ->
+            .onSuccess { values ->
+                val wallet = values[0] as JsonObject
+                val withdrawals = values[1] as List<JsonObject>
+                val rewards = values[2] as List<JsonObject>
+                val giftCards = values[3] as List<JsonObject>
                 val transactions = wallet["transactions"]?.jsonArray?.mapNotNull { it as? JsonObject }.orEmpty()
                 val balance = wallet["balance"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
-                _wallet.value = WalletState(transactions, withdrawals, rewards, balance)
+                _wallet.value = WalletState(transactions = transactions, withdrawals = withdrawals, giftCards = giftCards, rewards = rewards, balance = balance)
             }
             .onFailure { _wallet.value = WalletState(error = "Unable to load wallet history") }
     }
