@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     for (const row of adjustments) { const user = userMap.get(row.user_id); if (user) user.balance += Number(row.amount) }
     for (const row of redemptions) { const user = userMap.get(row.user_id); if (user) { if (row.status !== 'rejected') user.balance -= Number(row.cost); user.redemptions += 1 } }
     for (const row of plays) { const user = userMap.get(row.user_id); if (user) user.plays += 1 }
-    const decorate = (row: { user_id: string }) => ({ ...row, user_email: userMap.get(row.user_id)?.email ?? 'Unknown user' })
+    const decorate = (row: { user_id: string; cost?: number }) => ({ ...row, user_email: userMap.get(row.user_id)?.email ?? 'Unknown user', value_inr: Number(row.cost ?? 0) / 100 })
     return NextResponse.json({ data: { users: [...userMap.values()].map((user) => ({ ...user, balance: Math.max(user.balance, 0) })), transactions: transactions.map(decorate), plays: plays.map(decorate), redemptions: redemptions.map(decorate), rewards: rewardsResult.data ?? [], giftCards: cardsResult.data ?? [] } })
   }
 
@@ -89,7 +89,8 @@ export async function POST(request: Request) {
     const status = body.status
     if (!id || !['pending', 'approved', 'paid', 'rejected'].includes(String(status))) return NextResponse.json({ error: 'Invalid withdrawal update' }, { status: 400 })
     const adminNote = typeof body.adminNote === 'string' ? body.adminNote.trim().slice(0, 1000) : null
-    const { data, error } = await client.from('redemptions').update({ status, admin_note: adminNote }).eq('id', id).select('id,status,admin_note').single()
+    const storedNote = status === 'approved' && adminNote ? `GIFT_CARD_CODE:${adminNote}` : adminNote
+    const { data, error } = await client.from('redemptions').update({ status, admin_note: storedNote }).eq('id', id).select('id,status,admin_note').single()
     return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ data })
   }
 
